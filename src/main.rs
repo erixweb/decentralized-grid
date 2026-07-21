@@ -28,7 +28,7 @@ struct HourReport {
 }
 
 // Normal frequency of the grid.
-const STEADY_FREQUENCY: f64 = 50.0;
+const STEADY_FREQUENCY: f64 = 50.01;
 
 
 impl Grid {
@@ -431,7 +431,7 @@ fn main() {
         let irradiation = data.outputs.daily_profile[hour].g_i;
         let report = grid.tick(hour, irradiation);
 
-        daily_demand_kwh += report.total_demand_kw; // pas d'1h -> kW == kWh
+        daily_demand_kwh += report.total_demand_kw; // 1h -> kW == kWh
         daily_solar_kwh += report.total_solar_kw;
         daily_losses_kwh += report.losses_kw;
         daily_import_kwh += report.grid_import_kw;
