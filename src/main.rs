@@ -1,6 +1,7 @@
 use models::PvResponse;
+use serde::Serialize;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Write};
 use lines::Line;
 use transformers::Transformer;
 use buses::{Bus, BusKind};
@@ -25,6 +26,13 @@ struct HourReport {
     grid_import_kw: f64,   // Positive -> Import | Negative -> Export
     losses_kw: f64,
     frequency_hz: f64,
+}
+
+/// Matches the `DataT` type in chart.ts: `{ x: number, y: number }`
+#[derive(Serialize)]
+struct ChartPoint {
+    x: f64,
+    y: f64,
 }
 
 // Normal frequency of the grid.
@@ -425,6 +433,7 @@ fn main() {
     let mut daily_import_kwh = 0.0;
     let mut peak_import_kw = f64::MIN;
     let mut peak_export_kw = f64::MIN;
+    let mut frequency_points: Vec<ChartPoint> = Vec::new();
 
     println!("=== Simulació horària (dia feiner tipus de juliol) ===");
     for hour in 0..simulation_duration.min(data.outputs.daily_profile.len()) {
@@ -437,6 +446,11 @@ fn main() {
         daily_import_kwh += report.grid_import_kw;
         peak_import_kw = peak_import_kw.max(report.grid_import_kw);
         peak_export_kw = peak_export_kw.max(-report.grid_import_kw);
+
+        frequency_points.push(ChartPoint {
+            x: report.hour as f64,
+            y: report.frequency_hz,
+        });
 
         print_hour_report(&report);
     }
@@ -482,4 +496,11 @@ fn main() {
             );
         }
     }
+
+    // Frequency data as JSON in the chart.ts DataT[] format
+    let json = serde_json::to_string_pretty(&frequency_points)
+        .expect("Failed to serialize frequency data");
+    let mut file = File::create("frequency.json").expect("Failed to create frequency.json");
+    file.write_all(json.as_bytes()).expect("Failed to write frequency.json");
+    println!("\nFrequency data written to frequency.json");
 }
