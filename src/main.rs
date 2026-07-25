@@ -18,6 +18,7 @@ struct Grid {
     transformers: Vec<Transformer>,
     mv_voltage_kv: f64,
 }
+#[derive(Serialize)]
 struct HourReport {
     hour: usize,
     total_demand_kw: f64,
@@ -433,7 +434,7 @@ fn main() {
     let mut daily_import_kwh = 0.0;
     let mut peak_import_kw = f64::MIN;
     let mut peak_export_kw = f64::MIN;
-    let mut frequency_points: Vec<ChartPoint> = Vec::new();
+    let mut reports: Vec<HourReport> = Vec::new();
 
     println!("=== Simulació horària (dia feiner tipus de juliol) ===");
     for hour in 0..simulation_duration.min(data.outputs.daily_profile.len()) {
@@ -447,12 +448,8 @@ fn main() {
         peak_import_kw = peak_import_kw.max(report.grid_import_kw);
         peak_export_kw = peak_export_kw.max(-report.grid_import_kw);
 
-        frequency_points.push(ChartPoint {
-            x: report.hour as f64,
-            y: report.frequency_hz,
-        });
-
         print_hour_report(&report);
+        reports.push(report);
     }
 
     println!("\n=== Resum diari ===");
@@ -497,10 +494,10 @@ fn main() {
         }
     }
 
-    // Frequency data as JSON in the chart.ts DataT[] format
-    let json = serde_json::to_string_pretty(&frequency_points)
-        .expect("Failed to serialize frequency data");
-    let mut file = File::create("frequency.json").expect("Failed to create frequency.json");
-    file.write_all(json.as_bytes()).expect("Failed to write frequency.json");
-    println!("\nFrequency data written to frequency.json");
+    // Simulation data as JSON
+    let json = serde_json::to_string_pretty(&reports)
+        .expect("Failed to serialize simulation data");
+    let mut file = File::create("simulation_data.json").expect("Failed to create simulation_data.json");
+    file.write_all(json.as_bytes()).expect("Failed to write simulation_data.json");
+    println!("\nSimulation data written to simulation_data.json");
 }
