@@ -1,16 +1,15 @@
+use buses::{Bus, BusKind};
+use lines::Line;
 use models::PvResponse;
 use serde::Serialize;
 use std::fs::File;
 use std::io::{BufReader, Write};
-use lines::Line;
 use transformers::Transformer;
-use buses::{Bus, BusKind};
 
-mod lines; 
+mod buses;
+mod lines;
 mod models;
 mod transformers;
-mod buses;
-
 
 struct Grid {
     nodes: Vec<Bus>,
@@ -38,7 +37,6 @@ struct ChartPoint {
 
 // Normal frequency of the grid.
 const STEADY_FREQUENCY: f64 = 50.01;
-
 
 impl Grid {
     fn new(
@@ -191,7 +189,27 @@ impl Grid {
 }
 
 fn create_grid() -> Grid {
-    // --- Buses ---
+    const USEFUL_ROOF_PERCENTAGE: f64 = 0.6;
+
+    // Based on Mapa-urbanístic-catalunya.csv for Malgrat de Mar (2025):
+    // 13_Qual_SUC_R (Residential) sum of R1,R2,R3,R4,R5,R6:
+    let residential_ha = 88.7441;
+
+    // 12_A1_SUC (Industrial): 36.0394 ha
+    let industrial_ha = 36.0394;
+
+    // 12_A2_SUC (Touristic/Business): 8.6101 ha
+    let touristic_ha = 8.6101;
+
+    // 15_SE_SUC (Schools and local buildings): 16.1947 ha
+    let school_ha = 16.1947;
+
+    // Calc: (ha * 10000 m2/ha * 60%) / 5 m2/kWp = ha * 1200 kWp/ha
+    let kwp_residential = residential_ha * 1200.0;
+    let kwp_industrial = industrial_ha * 1200.0;
+    let kwp_touristic = touristic_ha * 1200.0;
+    let kwp_school = school_ha * 1200.0;
+
     // Bus 0: Substation
     let substation = Bus::new(
         0,
@@ -208,7 +226,7 @@ fn create_grid() -> Grid {
         None,
     );
 
-    // Bus 1: Historic Center 
+    // Bus 1: Historic Center
     let historic = Bus::new(
         1,
         BusKind::HistoricCenter.label(),
@@ -218,7 +236,7 @@ fn create_grid() -> Grid {
             120.0, 110.0, 100.0, 95.0, 95.0, 100.0, 120.0, 160.0, 220.0, 260.0, 290.0, 300.0,
             280.0, 260.0, 220.0, 230.0, 250.0, 280.0, 310.0, 320.0, 300.0, 260.0, 200.0, 150.0,
         ],
-        40.0,
+        kwp_residential / 2.0, // Historic center as half residential
         0.0,
         0.0,
         0.0,
@@ -227,7 +245,7 @@ fn create_grid() -> Grid {
         None,
     );
 
-    // Bus 2: Residential Zone 
+    // Bus 2: Residential Zone
     let residential = Bus::new(
         2,
         BusKind::Residential.label(),
@@ -237,7 +255,7 @@ fn create_grid() -> Grid {
             250.0, 220.0, 200.0, 190.0, 190.0, 200.0, 230.0, 280.0, 330.0, 300.0, 280.0, 270.0,
             290.0, 340.0, 400.0, 380.0, 350.0, 340.0, 360.0, 400.0, 480.0, 560.0, 520.0, 380.0,
         ],
-        180.0,
+        kwp_residential / 2.0, // Other half
         0.0,
         0.0,
         0.0,
@@ -256,7 +274,7 @@ fn create_grid() -> Grid {
             380.0, 340.0, 300.0, 280.0, 270.0, 270.0, 290.0, 330.0, 400.0, 480.0, 560.0, 650.0,
             750.0, 820.0, 850.0, 830.0, 800.0, 820.0, 900.0, 1050.0, 1200.0, 1300.0, 1150.0, 700.0,
         ],
-        260.0,
+        kwp_touristic,
         300.0,
         100.0,
         100.0,
@@ -265,7 +283,7 @@ fn create_grid() -> Grid {
         Some((18, 23)),
     );
 
-    // Bus 4: Industrial Polygon 
+    // Bus 4: Industrial Polygon
     let industrial = Bus::new(
         4,
         BusKind::Industrial.label(),
@@ -275,7 +293,7 @@ fn create_grid() -> Grid {
             650.0, 640.0, 630.0, 630.0, 630.0, 640.0, 700.0, 820.0, 900.0, 920.0, 930.0, 930.0,
             900.0, 850.0, 900.0, 920.0, 910.0, 880.0, 820.0, 750.0, 700.0, 680.0, 660.0, 650.0,
         ],
-        520.0,
+        kwp_industrial,
         0.0,
         0.0,
         0.0,
@@ -284,7 +302,7 @@ fn create_grid() -> Grid {
         None,
     );
 
-    // Bus 5: School 
+    // Bus 5: School
     let schools = Bus::new(
         5,
         BusKind::School.label(),
@@ -294,7 +312,7 @@ fn create_grid() -> Grid {
             15.0, 15.0, 15.0, 15.0, 15.0, 15.0, 20.0, 35.0, 55.0, 60.0, 55.0, 55.0, 55.0, 60.0,
             65.0, 60.0, 45.0, 30.0, 20.0, 15.0, 15.0, 15.0, 15.0, 15.0,
         ],
-        95.0,
+        kwp_school,
         40.0,
         15.0,
         15.0,
@@ -417,8 +435,39 @@ fn print_hour_report(report: &HourReport) {
     );
 }
 
+enum Month {
+    January,
+    February,
+    March,
+    April,
+    May,
+    June,
+    July,
+    August,
+    September,
+    October,
+    November,
+    December,
+}
+
 fn main() {
-    let json_file = File::open("avg-irradiation-july.json").expect("File not found");
+    const MONTH: Month = Month::August;
+    let month_label = match MONTH {
+        Month::January => "january",
+        Month::February => "february",
+        Month::March => "march",
+        Month::April => "april",
+        Month::May => "may",
+        Month::June => "june",
+        Month::July => "july",
+        Month::August => "august",
+        Month::September => "september",
+        Month::October => "october",
+        Month::November => "november",
+        Month::December => "december",
+    };
+    let json_file =
+        File::open(format!("pvgis/irradiation-{}.json", month_label)).expect("File not found");
     let reader = BufReader::new(json_file);
 
     let data: PvResponse =
@@ -438,6 +487,7 @@ fn main() {
 
     println!("=== Simulació horària (dia feiner tipus de juliol) ===");
     for hour in 0..simulation_duration.min(data.outputs.daily_profile.len()) {
+        println!("=== {} ===", month_label);
         let irradiation = data.outputs.daily_profile[hour].g_i;
         let report = grid.tick(hour, irradiation);
 
@@ -495,9 +545,10 @@ fn main() {
     }
 
     // Simulation data as JSON
-    let json = serde_json::to_string_pretty(&reports)
-        .expect("Failed to serialize simulation data");
-    let mut file = File::create("simulation_data.json").expect("Failed to create simulation_data.json");
-    file.write_all(json.as_bytes()).expect("Failed to write simulation_data.json");
+    let json = serde_json::to_string_pretty(&reports).expect("Failed to serialize simulation data");
+    let mut file =
+        File::create("simulation_data.json").expect("Failed to create simulation_data.json");
+    file.write_all(json.as_bytes())
+        .expect("Failed to write simulation_data.json");
     println!("\nSimulation data written to simulation_data.json");
 }
