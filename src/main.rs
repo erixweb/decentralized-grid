@@ -65,10 +65,42 @@ impl Grid {
 
     fn tick(&mut self, hour: usize, irradiation_w_m2: f64) -> HourReport {
         let mut total_demand_kw = 0.0;
-        let mut total_solar_kw = 0.0;
+        let mut potential_solar_kw = 0.0;
         let mut total_battery_kw = 0.0;
         let mut grid_import_kw = 0.0;
         let mut losses_kw = 0.0;
+
+        // First pass: Calculate total demand and potential solar generation
+        for bus_idx in 0..self.nodes.len() {
+            if self.nodes[bus_idx].kind == BusKind::Substation {
+                continue;
+            }
+            total_demand_kw += self.nodes[bus_idx].demand_at(hour);
+            potential_solar_kw += self.nodes[bus_idx].solar_generation_at(irradiation_w_m2);
+        }
+
+        // Max absorption capacity = Demand + Battery Charge Capacity + Max Export Limit (e.g., 5000 kW)
+        let max_export_limit = 5000.0;
+        let mut battery_charge_capacity = 0.0;
+        for bus in &self.nodes {
+            if bus.kind != BusKind::Substation {
+                // Only consider charging if it's not a night charge window (which uses grid)
+                // and if the battery has space.
+                battery_charge_capacity += bus.max_charge_kw;
+            }
+        }
+
+        let max_absorption = total_demand_kw + battery_charge_capacity + max_export_limit;
+
+        // Solar Curtailment: Limit generation to what the grid can handle to stabilize frequency
+        let actual_solar_kw = potential_solar_kw.min(max_absorption);
+        let curtailment_ratio = if potential_solar_kw > 0.0 {
+            actual_solar_kw / potential_solar_kw
+        } else {
+            1.0
+        };
+
+        let mut total_solar_kw = 0.0;
 
         for bus_idx in 0..self.nodes.len() {
             if self.nodes[bus_idx].kind == BusKind::Substation {
@@ -76,14 +108,12 @@ impl Grid {
             }
 
             let demand = self.nodes[bus_idx].demand_at(hour);
-            let solar = self.nodes[bus_idx].solar_generation_at(irradiation_w_m2);
+            // Apply curtailment ratio to individual bus generation
+            let solar =
+                self.nodes[bus_idx].solar_generation_at(irradiation_w_m2) * curtailment_ratio;
 
             // Electrical balance
-            // Positive -> Surplus
-            // Negative -> Deficit
             let net_value = solar - demand;
-
-            total_demand_kw += demand;
             total_solar_kw += solar;
 
             let in_night_charge_window = matches!(
@@ -125,8 +155,7 @@ impl Grid {
 
             // Power exchanged with the Medium Tension grid.
             let mv_power_kw = match self.transformer_for(self.nodes[bus_idx].id) {
-                Some(tr) => tr.refer_to_primary(-net_after_battery), // >0
-                // importing, <0 exporting
+                Some(tr) => tr.refer_to_primary(-net_after_battery),
                 None => -net_after_battery,
             };
 
@@ -136,8 +165,6 @@ impl Grid {
             };
 
             losses_kw += line_losses;
-
-            // Have line losses in mind to supply enough energy.
             grid_import_kw += mv_power_kw + line_losses;
         }
 
@@ -156,7 +183,7 @@ impl Grid {
             total_battery_kw,
             grid_import_kw,
             losses_kw,
-            frequency_hz: frequency_hz,
+            frequency_hz,
         }
     }
 
@@ -189,20 +216,21 @@ impl Grid {
 }
 
 fn create_grid() -> Grid {
+    const SOLAR_COVERAGE: f64 = 0.5;
     const USEFUL_ROOF_PERCENTAGE: f64 = 0.6;
 
     // Based on Mapa-urbanístic-catalunya.csv for Malgrat de Mar (2025):
     // 13_Qual_SUC_R (Residential) sum of R1,R2,R3,R4,R5,R6:
-    let residential_ha = 88.7441;
+    let residential_ha = 88.7441 * USEFUL_ROOF_PERCENTAGE * SOLAR_COVERAGE;
 
     // 12_A1_SUC (Industrial): 36.0394 ha
-    let industrial_ha = 36.0394;
+    let industrial_ha = 36.0394 * USEFUL_ROOF_PERCENTAGE * SOLAR_COVERAGE;
 
     // 12_A2_SUC (Touristic/Business): 8.6101 ha
-    let touristic_ha = 8.6101;
+    let touristic_ha = 8.6101 * USEFUL_ROOF_PERCENTAGE * SOLAR_COVERAGE;
 
     // 15_SE_SUC (Schools and local buildings): 16.1947 ha
-    let school_ha = 16.1947;
+    let school_ha = 16.1947 * USEFUL_ROOF_PERCENTAGE * SOLAR_COVERAGE;
 
     // Calc: (ha * 10000 m2/ha * 60%) / 5 m2/kWp = ha * 1200 kWp/ha
     let kwp_residential = residential_ha * 1200.0;
@@ -233,10 +261,11 @@ fn create_grid() -> Grid {
         BusKind::HistoricCenter,
         0.4,
         [
-            120.0, 110.0, 100.0, 95.0, 95.0, 100.0, 120.0, 160.0, 220.0, 260.0, 290.0, 300.0,
-            280.0, 260.0, 220.0, 230.0, 250.0, 280.0, 310.0, 320.0, 300.0, 260.0, 200.0, 150.0,
+            800.0, 750.0, 700.0, 700.0, 750.0, 900.0, 1100.0, 1400.0, 1500.0, 1400.0, 1250.0,
+            1100.0, 1000.0, 1000.0, 1050.0, 1150.0, 1300.0, 1600.0, 1800.0, 1900.0, 1750.0, 1500.0,
+            1250.0, 1000.0,
         ],
-        kwp_residential / 2.0, // Historic center as half residential
+        kwp_residential / 2.0,
         0.0,
         0.0,
         0.0,
@@ -252,10 +281,11 @@ fn create_grid() -> Grid {
         BusKind::Residential,
         0.4,
         [
-            250.0, 220.0, 200.0, 190.0, 190.0, 200.0, 230.0, 280.0, 330.0, 300.0, 280.0, 270.0,
-            290.0, 340.0, 400.0, 380.0, 350.0, 340.0, 360.0, 400.0, 480.0, 560.0, 520.0, 380.0,
+            800.0, 750.0, 700.0, 700.0, 750.0, 900.0, 1100.0, 1400.0, 1500.0, 1400.0, 1250.0,
+            1100.0, 1000.0, 1000.0, 1050.0, 1150.0, 1300.0, 1600.0, 1800.0, 1900.0, 1750.0, 1500.0,
+            1250.0, 1000.0,
         ],
-        kwp_residential / 2.0, // Other half
+        kwp_residential / 2.0,
         0.0,
         0.0,
         0.0,
@@ -271,16 +301,17 @@ fn create_grid() -> Grid {
         BusKind::Touristic,
         0.4,
         [
-            380.0, 340.0, 300.0, 280.0, 270.0, 270.0, 290.0, 330.0, 400.0, 480.0, 560.0, 650.0,
-            750.0, 820.0, 850.0, 830.0, 800.0, 820.0, 900.0, 1050.0, 1200.0, 1300.0, 1150.0, 700.0,
+            1200.0, 1100.0, 1000.0, 1000.0, 1100.0, 1500.0, 2000.0, 3000.0, 4000.0, 4500.0, 4800.0,
+            5000.0, 5000.0, 4800.0, 4500.0, 4000.0, 3800.0, 3500.0, 3000.0, 2500.0, 2000.0, 1800.0,
+            1500.0, 1300.0,
         ],
         kwp_touristic,
-        300.0,
-        100.0,
-        100.0,
+        1500.0,
+        500.0,
+        500.0,
         Some((0, 6)),
         90.0,
-        Some((18, 23)),
+        None,
     );
 
     // Bus 4: Industrial Polygon
@@ -290,8 +321,9 @@ fn create_grid() -> Grid {
         BusKind::Industrial,
         0.4,
         [
-            650.0, 640.0, 630.0, 630.0, 630.0, 640.0, 700.0, 820.0, 900.0, 920.0, 930.0, 930.0,
-            900.0, 850.0, 900.0, 920.0, 910.0, 880.0, 820.0, 750.0, 700.0, 680.0, 660.0, 650.0,
+            1200.0, 1100.0, 1000.0, 1000.0, 1100.0, 1500.0, 2500.0, 3500.0, 4000.0, 4000.0, 4000.0,
+            4000.0, 3500.0, 4000.0, 4000.0, 4000.0, 3500.0, 3000.0, 2500.0, 2000.0, 1500.0, 1200.0,
+            1100.0, 1200.0,
         ],
         kwp_industrial,
         0.0,
@@ -309,13 +341,13 @@ fn create_grid() -> Grid {
         BusKind::School,
         0.4,
         [
-            15.0, 15.0, 15.0, 15.0, 15.0, 15.0, 20.0, 35.0, 55.0, 60.0, 55.0, 55.0, 55.0, 60.0,
-            65.0, 60.0, 45.0, 30.0, 20.0, 15.0, 15.0, 15.0, 15.0, 15.0,
+            50.0, 50.0, 50.0, 50.0, 100.0, 200.0, 500.0, 1500.0, 2000.0, 2000.0, 2000.0, 1800.0,
+            1500.0, 1500.0, 1500.0, 1200.0, 800.0, 500.0, 200.0, 100.0, 100.0, 100.0, 100.0, 100.0,
         ],
         kwp_school,
-        40.0,
-        15.0,
-        15.0,
+        200.0,
+        75.0,
+        75.0,
         None,
         0.0,
         None,

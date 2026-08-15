@@ -15,7 +15,8 @@ const COLORS: Record<string, string> = {
 export function chart(
     series: Record<string, DataT[]>,
     visibility: Record<string, boolean>,
-    canvas: HTMLCanvasElement
+    canvas: HTMLCanvasElement,
+    hoverX?: number
 ) {
     const ctx = canvas.getContext("2d")
     if (!ctx) {
@@ -111,8 +112,51 @@ export function chart(
 
     // Y-Axis Labels
     ctx.textAlign = "right";
-    ctx.fillText(baselineY.toFixed(2), padding - 10, canvas.height - padding);
-    ctx.fillText(topY.toFixed(2), padding - 10, padding + 5);
+    ctx.fillStyle = "#333";
+
+    const numTicks = 5;
+    for (let i = 0; i < numTicks; i++) {
+        const tickY = baselineY + (i * (yRange / (numTicks - 1)));
+        const canvasY = mapY(tickY);
+        ctx.fillText(tickY.toFixed(2), padding - 10, canvasY);
+    }
+
+    // Draw Hover Tooltip
+    if (hoverX !== undefined) {
+        const canvasX = mapX(hoverX);
+        
+        // Vertical line at hover position
+        ctx.beginPath();
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = "#999";
+        ctx.lineWidth = 1;
+        ctx.moveTo(canvasX, padding);
+        ctx.lineTo(canvasX, canvas.height - padding);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Tooltip box
+        let tooltipY = padding;
+        const tooltipPadding = 5;
+        ctx.font = "12px sans-serif";
+        
+        visibleIds.forEach(id => {
+            const point = series[id].find(p => p.x === hoverX);
+            if (point) {
+                const text = `${id}: ${point.y.toFixed(2)}`;
+                const textWidth = ctx.measureText(text).width;
+                
+                ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                ctx.fillRect(canvasX + 5, tooltipY, textWidth + 10, 20);
+                
+                ctx.fillStyle = COLORS[id] || "#000";
+                ctx.textAlign = "left";
+                ctx.fillText(text, canvasX + 10, tooltipY + 15);
+                
+                tooltipY += 25;
+            }
+        });
+    }
 }
 
 function panic(err: string) {

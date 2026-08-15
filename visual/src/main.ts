@@ -66,6 +66,29 @@ async function init() {
         // Initial render
         chart(seriesData, visibility, chart_canvas);
 
+        // Hover interaction
+        chart_canvas.addEventListener("mousemove", (e) => {
+            const rect = chart_canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            
+            const padding = 50;
+            const chartWidth = chart_canvas.width - padding * 2;
+            
+            // Calculate the hour (x-value) corresponding to mouseX
+            // hour = ((mouseX - padding) / chartWidth) * 23
+            const hour = Math.round(((mouseX - padding) / chartWidth) * 23);
+            
+            if (hour >= 0 && hour <= 23) {
+                chart(seriesData, visibility, chart_canvas, hour);
+            } else {
+                chart(seriesData, visibility, chart_canvas);
+            }
+        });
+
+        // Reset hover when mouse leaves
+        chart_canvas.addEventListener("mouseleave", () => {
+            chart(seriesData, visibility, chart_canvas);
+        });
     } catch (e) {
         console.error("Failed to load simulation data:", e);
     }
