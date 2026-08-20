@@ -21,19 +21,19 @@
     "hour": 2,
     "total_demand_kw": 3450.0,
     "total_solar_kw": 0.0,
-    "total_battery_kw": -350.0,
-    "grid_import_kw": 3861.6271260626313,
-    "losses_kw": 0.8499200030974414,
-    "frequency_hz": 49.98797101449275
+    "total_battery_kw": -500.0,
+    "grid_import_kw": 4013.998879223523,
+    "losses_kw": 0.9374092045984499,
+    "frequency_hz": 49.98710144927536
   },
   {
     "hour": 3,
     "total_demand_kw": 3450.0,
     "total_solar_kw": 0.0,
-    "total_battery_kw": 0.0,
-    "grid_import_kw": 3506.1288496468956,
-    "losses_kw": 0.6815928259405308,
-    "frequency_hz": 49.989999999999995
+    "total_battery_kw": -300.0,
+    "grid_import_kw": 3810.8385882066964,
+    "losses_kw": 0.8228034669597022,
+    "frequency_hz": 49.98826086956522
   },
   {
     "hour": 4,
@@ -56,163 +56,163 @@
   {
     "hour": 6,
     "total_demand_kw": 7200.0,
-    "total_solar_kw": 192.97249711919997,
+    "total_solar_kw": 96.48624855959999,
     "total_battery_kw": 500.0,
-    "grid_import_kw": 6614.604925503059,
-    "losses_kw": 2.7416380225873684,
-    "frequency_hz": 49.99192492360311
+    "grid_import_kw": 6712.964659331237,
+    "losses_kw": 2.8044948130610368,
+    "frequency_hz": 49.991656906246
   },
   {
     "hour": 7,
     "total_demand_kw": 10800.0,
-    "total_solar_kw": 3783.4973805888,
+    "total_solar_kw": 1891.7486902944,
     "total_battery_kw": 500.0,
-    "grid_import_kw": 6625.987301019529,
-    "losses_kw": 3.5253094481887173,
-    "frequency_hz": 49.99793240255664
+    "grid_import_kw": 8554.503202169511,
+    "losses_kw": 4.79260085205973,
+    "frequency_hz": 49.99442916424128
   },
   {
     "hour": 8,
     "total_demand_kw": 13000.0,
-    "total_solar_kw": 11309.424768237599,
-    "total_battery_kw": 350.0,
-    "grid_import_kw": 1500.9540958424345,
-    "losses_kw": 3.6505419109527497,
-    "frequency_hz": 50.00793757656652
+    "total_solar_kw": 5654.7123841187995,
+    "total_battery_kw": 272.65504291620005,
+    "grid_import_kw": 7197.907525353349,
+    "losses_kw": 4.820220978718755,
+    "frequency_hz": 49.999119026810824
   },
   {
     "hour": 9,
     "total_demand_kw": 13300.0,
-    "total_solar_kw": 18875.0,
-    "total_battery_kw": -43.44164951403309,
-    "grid_import_kw": -5297.958814278099,
-    "losses_kw": 8.18768816067019,
-    "frequency_hz": 50.01831813285787
+    "total_solar_kw": 9926.823192767999,
+    "total_battery_kw": -50.0,
+    "grid_import_kw": 3582.4285340339393,
+    "losses_kw": 4.346570708461324,
+    "frequency_hz": 50.00485236570341
   },
   {
     "hour": 10,
     "total_demand_kw": 13300.0,
-    "total_solar_kw": 18875.0,
-    "total_battery_kw": -43.44164951403286,
-    "grid_import_kw": -5286.537053259491,
-    "losses_kw": 9.040921260496267,
-    "frequency_hz": 50.01831813285787
+    "total_solar_kw": 13778.9869882356,
+    "total_battery_kw": -350.0,
+    "grid_import_kw": 66.86404271229401,
+    "losses_kw": 5.751732790003326,
+    "frequency_hz": 50.01019396539584
   },
   {
     "hour": 11,
     "total_demand_kw": 13000.0,
-    "total_solar_kw": 18574.999999999996,
-    "total_battery_kw": -75.0,
-    "grid_import_kw": -5245.376449551577,
-    "losses_kw": 9.537943221159404,
-    "frequency_hz": 50.01846153846154
+    "total_solar_kw": 16955.3054591244,
+    "total_battery_kw": -470.55074415879994,
+    "grid_import_kw": -3265.498632148162,
+    "losses_kw": 7.799138281779964,
+    "frequency_hz": 50.015361161099946
   },
   {
     "hour": 12,
     "total_demand_kw": 12000.0,
-    "total_solar_kw": 17575.0,
-    "total_battery_kw": -38.11670097193405,
-    "grid_import_kw": -5280.130089144853,
-    "losses_kw": 9.20678202952568,
-    "frequency_hz": 50.019228138831714
+    "total_solar_kw": 18700.6688340984,
+    "total_battery_kw": -1400.0,
+    "grid_import_kw": -5042.888055624646,
+    "losses_kw": 9.353328256169632,
+    "frequency_hz": 50.01883444805683
   },
   {
     "hour": 13,
     "total_demand_kw": 12300.0,
-    "total_solar_kw": 17875.0,
-    "total_battery_kw": 0.0,
-    "grid_import_kw": -5320.3679270695975,
-    "losses_kw": 8.994125823416812,
-    "frequency_hz": 50.0190650406504
+    "total_solar_kw": 19250.0,
+    "total_battery_kw": -860.4405515422079,
+    "grid_import_kw": -5823.053162181004,
+    "losses_kw": 9.811487390812777,
+    "frequency_hz": 50.019901722680416
   },
   {
     "hour": 14,
     "total_demand_kw": 12100.0,
-    "total_solar_kw": 17675.0,
-    "total_battery_kw": 0.0,
-    "grid_import_kw": -5331.00830114109,
-    "losses_kw": 8.251415339593876,
-    "frequency_hz": 50.019214876033054
+    "total_solar_kw": 18046.019573276397,
+    "total_battery_kw": -447.7178215751992,
+    "grid_import_kw": -5254.371613818145,
+    "losses_kw": 8.491160103246239,
+    "frequency_hz": 50.01908810206893
   },
   {
     "hour": 15,
     "total_demand_kw": 11500.0,
-    "total_solar_kw": 17075.0,
-    "total_battery_kw": 0.0,
-    "grid_import_kw": -5344.901791197908,
-    "losses_kw": 6.959545487395709,
-    "frequency_hz": 50.01969565217391
+    "total_solar_kw": 15364.2759233796,
+    "total_battery_kw": 198.37837776720062,
+    "grid_import_kw": -3862.2183824934473,
+    "losses_kw": 5.789634276459082,
+    "frequency_hz": 50.01706548574112
   },
   {
     "hour": 16,
     "total_demand_kw": 10700.0,
-    "total_solar_kw": 16275.000000000002,
-    "total_battery_kw": 0.0,
-    "grid_import_kw": -5351.186901950674,
-    "losses_kw": 6.03666268935391,
-    "frequency_hz": 50.02042056074766
+    "total_solar_kw": 11740.632190289998,
+    "total_battery_kw": 607.0128850996005,
+    "grid_import_kw": -1496.9732104931143,
+    "losses_kw": 3.5906878348390676,
+    "frequency_hz": 50.01307971042129
   },
   {
     "hour": 17,
     "total_demand_kw": 10200.0,
-    "total_solar_kw": 14916.729868847999,
-    "total_battery_kw": 0.0,
-    "grid_import_kw": -4519.647133698105,
-    "losses_kw": 4.484155416688555,
-    "frequency_hz": 50.01924848993892
+    "total_solar_kw": 7458.364934423999,
+    "total_battery_kw": 1000.0,
+    "grid_import_kw": 1826.2583530216405,
+    "losses_kw": 2.091706799352433,
+    "frequency_hz": 50.00658502928318
   },
   {
     "hour": 18,
     "total_demand_kw": 9300.0,
-    "total_solar_kw": 6889.1623056215985,
-    "total_battery_kw": 0.0,
-    "grid_import_kw": 2486.796148546846,
-    "losses_kw": 1.7088029678676095,
-    "frequency_hz": 50.004815402807786
+    "total_solar_kw": 3444.5811528107993,
+    "total_battery_kw": 450.66281149320594,
+    "grid_import_kw": 5495.566345261148,
+    "losses_kw": 2.481621244834919,
+    "frequency_hz": 49.998376868740436
   },
   {
     "hour": 19,
     "total_demand_kw": 8400.0,
-    "total_solar_kw": 1281.9202726248,
-    "total_battery_kw": 0.0,
-    "grid_import_kw": 7238.189516880972,
-    "losses_kw": 2.886019224701353,
-    "frequency_hz": 49.993052191125294
+    "total_solar_kw": 640.9601363124,
+    "total_battery_kw": 380.6084959884,
+    "grid_import_kw": 7500.301228503972,
+    "losses_kw": 3.070524627426707,
+    "frequency_hz": 49.99243230626738
   },
   {
     "hour": 20,
     "total_demand_kw": 7100.0,
     "total_solar_kw": 0.0,
-    "total_battery_kw": 75.0,
-    "grid_import_kw": 7145.389076093403,
-    "losses_kw": 2.5789408451489693,
-    "frequency_hz": 49.99021126760563
+    "total_battery_kw": 450.0,
+    "grid_import_kw": 6762.233091989299,
+    "losses_kw": 2.3390097601910256,
+    "frequency_hz": 49.9912676056338
   },
   {
     "hour": 21,
     "total_demand_kw": 6100.0,
     "total_solar_kw": 0.0,
-    "total_battery_kw": 75.0,
-    "grid_import_kw": 6128.421752665221,
-    "losses_kw": 1.8916873591106114,
-    "frequency_hz": 49.99024590163934
+    "total_battery_kw": 450.0,
+    "grid_import_kw": 5745.302982972009,
+    "losses_kw": 1.6889706850456356,
+    "frequency_hz": 49.99147540983606
   },
   {
     "hour": 22,
     "total_demand_kw": 5200.0,
     "total_solar_kw": 0.0,
-    "total_battery_kw": 50.0,
-    "grid_import_kw": 5237.898726998621,
-    "losses_kw": 1.37817637775915,
-    "frequency_hz": 49.990192307692304
+    "total_battery_kw": 400.0,
+    "grid_import_kw": 4880.078955123361,
+    "losses_kw": 1.227245234667883,
+    "frequency_hz": 49.99153846153846
   },
   {
     "hour": 23,
     "total_demand_kw": 4600.0,
     "total_solar_kw": 0.0,
-    "total_battery_kw": 0.0,
-    "grid_import_kw": 4676.965538547846,
-    "losses_kw": 1.1382620761466897,
-    "frequency_hz": 49.989999999999995
+    "total_battery_kw": 100.0,
+    "grid_import_kw": 4573.869422966067,
+    "losses_kw": 1.1349299995215094,
+    "frequency_hz": 49.990434782608695
   }
 ]

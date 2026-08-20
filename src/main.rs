@@ -216,8 +216,8 @@ impl Grid {
 }
 
 fn create_grid() -> Grid {
-    const SOLAR_COVERAGE: f64 = 0.5;
-    const USEFUL_ROOF_PERCENTAGE: f64 = 0.6;
+    const SOLAR_COVERAGE: f64 = 0.3;
+    const USEFUL_ROOF_PERCENTAGE: f64 = 0.5;
 
     // Based on Mapa-urbanístic-catalunya.csv for Malgrat de Mar (2025):
     // 13_Qual_SUC_R (Residential) sum of R1,R2,R3,R4,R5,R6:
@@ -266,9 +266,9 @@ fn create_grid() -> Grid {
             1250.0, 1000.0,
         ],
         kwp_residential / 2.0,
-        0.0,
-        0.0,
-        0.0,
+        200.0, // Moderate storage for historic center
+        50.0,
+        50.0,
         None,
         0.0,
         None,
@@ -286,9 +286,9 @@ fn create_grid() -> Grid {
             1250.0, 1000.0,
         ],
         kwp_residential / 2.0,
-        0.0,
-        0.0,
-        0.0,
+        1500.0, // Distributed home storage
+        300.0,
+        300.0,
         None,
         0.0,
         None,
@@ -306,7 +306,7 @@ fn create_grid() -> Grid {
             1500.0, 1300.0,
         ],
         kwp_touristic,
-        1500.0,
+        2000.0, // Commercial storage for hotels/businesses
         500.0,
         500.0,
         Some((0, 6)),
@@ -326,9 +326,9 @@ fn create_grid() -> Grid {
             1100.0, 1200.0,
         ],
         kwp_industrial,
-        0.0,
-        0.0,
-        0.0,
+        3000.0, // Large-scale BESS for industrial zone
+        1000.0,
+        1000.0,
         None,
         0.0,
         None,
@@ -345,9 +345,9 @@ fn create_grid() -> Grid {
             1500.0, 1500.0, 1500.0, 1200.0, 800.0, 500.0, 200.0, 100.0, 100.0, 100.0, 100.0, 100.0,
         ],
         kwp_school,
-        200.0,
-        75.0,
-        75.0,
+        500.0, // Facility storage
+        100.0,
+        100.0,
         None,
         0.0,
         None,
@@ -498,6 +498,7 @@ fn main() {
         Month::November => "november",
         Month::December => "december",
     };
+
     let json_file =
         File::open(format!("pvgis/irradiation-{}.json", month_label)).expect("File not found");
     let reader = BufReader::new(json_file);
