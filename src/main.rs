@@ -467,36 +467,32 @@ fn print_hour_report(report: &HourReport) {
     );
 }
 
-enum Month {
-    January,
-    February,
-    March,
-    April,
-    May,
-    June,
-    July,
-    August,
-    September,
-    October,
-    November,
-    December,
-}
-
 fn main() {
-    const MONTH: Month = Month::August;
-    let month_label = match MONTH {
-        Month::January => "january",
-        Month::February => "february",
-        Month::March => "march",
-        Month::April => "april",
-        Month::May => "may",
-        Month::June => "june",
-        Month::July => "july",
-        Month::August => "august",
-        Month::September => "september",
-        Month::October => "october",
-        Month::November => "november",
-        Month::December => "december",
+    println!("Enter the month (1-12):");
+    let mut input = String::new();
+    std::io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
+
+    let month_num: usize = input
+        .trim()
+        .parse()
+        .expect("Please enter a valid number between 1 and 12");
+
+    let month_label = match month_num {
+        1 => "january",
+        2 => "february",
+        3 => "march",
+        4 => "april",
+        5 => "may",
+        6 => "june",
+        7 => "july",
+        8 => "august",
+        9 => "september",
+        10 => "october",
+        11 => "november",
+        12 => "december",
+        _ => panic!("Month must be between 1 and 12"),
     };
 
     let json_file =
@@ -518,7 +514,7 @@ fn main() {
     let mut peak_export_kw = f64::MIN;
     let mut reports: Vec<HourReport> = Vec::new();
 
-    println!("=== Simulació horària (dia feiner tipus de juliol) ===");
+    println!("=== Simulació horària ===");
     for hour in 0..simulation_duration.min(data.outputs.daily_profile.len()) {
         println!("=== {} ===", month_label);
         let irradiation = data.outputs.daily_profile[hour].g_i;
@@ -577,10 +573,12 @@ fn main() {
         }
     }
 
-    // Simulation data as JSON
+    write_simulation_data("./visual/public/simulation_data.json", &reports);
+}
+
+fn write_simulation_data(path: &str, reports: &[HourReport]) {
     let json = serde_json::to_string_pretty(&reports).expect("Failed to serialize simulation data");
-    let mut file =
-        File::create("simulation_data.json").expect("Failed to create simulation_data.json");
+    let mut file = File::create(path).expect("Failed to create simulation_data.json");
     file.write_all(json.as_bytes())
         .expect("Failed to write simulation_data.json");
     println!("\nSimulation data written to simulation_data.json");

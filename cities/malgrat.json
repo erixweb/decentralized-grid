@@ -1,0 +1,25 @@
+{
+  "city": "Malgrat de Mar",
+  "nodes": {
+    "residential": {
+      "roof_area_ha": 1.0,
+      "battery_capacity_kwh": 10.0
+    },
+    "historic_center": {
+      "roof_area_ha": 1.0,
+      "battery_capacity_kwh": 10.0
+    },
+    "industrial": {
+      "roof_area_ha": 1.0,
+      "battery_capacity_kwh": 10.0
+    },
+    "schools": {
+      "roof_area_ha": 1.0,
+      "battery_capacity_kwh": 10.0
+    },    
+    "touristic": {
+      "roof_area_ha": 1.0,
+      "battery_capacity_kwh": 10.0
+    }
+  }
+}
