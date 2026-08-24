@@ -36,7 +36,7 @@ struct ChartPoint {
 }
 
 // Normal frequency of the grid.
-const STEADY_FREQUENCY: f64 = 50.01;
+const STEADY_FREQUENCY: f64 = 50.0;
 
 impl Grid {
     fn new(
@@ -174,7 +174,7 @@ impl Grid {
             0.0
         };
 
-        let frequency_hz = STEADY_FREQUENCY + imbalance_ratio * 0.02;
+        let frequency_hz = STEADY_FREQUENCY + imbalance_ratio * 1.0;
 
         HourReport {
             hour,
@@ -368,7 +368,7 @@ fn create_grid() -> Grid {
             id: 1,
             from: 0,
             to: 1,
-            distance_km: 0.6,
+            distance_km: 1.4,
             cross_section_mm2: 150.0,
         },
         Line {
