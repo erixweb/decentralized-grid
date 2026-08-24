@@ -167,14 +167,24 @@ impl Grid {
             losses_kw += line_losses;
             grid_import_kw += mv_power_kw + line_losses;
         }
+        let max_substation_import_kw = 15000.0;
+
+        // Potencia de respaldo efectivamente importada desde la red de transporte
+        let effective_import_kw = grid_import_kw.min(max_substation_import_kw);
+
+        // Balanza de potencia no compensada:
+        // Al importar automáticamente la energía requerida por la subestación,
+        // el déficit residual de la red local se reduce a cero.
+        let uncompensated_imbalance_kw = (total_solar_kw + total_battery_kw + effective_import_kw)
+            - (total_demand_kw + losses_kw);
 
         let imbalance_ratio = if total_demand_kw > 0.0 {
-            (total_solar_kw + total_battery_kw - total_demand_kw) / total_demand_kw
+            uncompensated_imbalance_kw / total_demand_kw
         } else {
             0.0
         };
 
-        let frequency_hz = STEADY_FREQUENCY + imbalance_ratio * 1.0;
+        let frequency_hz = STEADY_FREQUENCY + imbalance_ratio * 2.0;
 
         HourReport {
             hour,
