@@ -26,7 +26,7 @@ impl Line {
         let resistance = MATERIAL_RESISTIVITY * distance_m / area_m2;
 
         // P_loss = 3 · R · I^2
-        let power_loss_w = 3.0 * resistance * intensity * intensity;
+        let power_loss_w = 3.0 * resistance * intensity.powi(2);
 
         // Power losses in kW.
         power_loss_w / 1000.0
