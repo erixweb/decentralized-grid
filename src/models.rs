@@ -1,6 +1,8 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 // --- Top Level ---
+pub const STEADY_FREQUENCY: f64 = 50.0;
+
 #[derive(Deserialize, Debug)]
 pub struct PvResponse {
     pub inputs: Inputs,
@@ -70,4 +72,21 @@ pub struct DailyProfile {
 
     #[serde(rename = "Gd(i)")]
     pub gd_i: f64,
+}
+
+#[derive(Serialize, Debug)]
+pub struct HourReport {
+    pub hour: usize,
+    pub total_demand_kw: f64,
+    pub total_solar_kw: f64,
+    pub total_battery_kw: f64, // Positive -> discharging | Negative -> charging
+    pub grid_import_kw: f64,   // Positive -> Import | Negative -> Export
+    pub losses_kw: f64,
+    pub frequency_hz: f64,
+}
+
+#[derive(Serialize, Debug)]
+pub struct ChartPoint {
+    pub x: f64,
+    pub y: f64,
 }

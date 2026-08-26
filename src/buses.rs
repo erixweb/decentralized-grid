@@ -1,3 +1,5 @@
+use crate::models::STEADY_FREQUENCY;
+
 #[derive(Debug)]
 pub struct Bus {
     pub id: usize,
@@ -38,9 +40,6 @@ impl BusKind {
         }
     }
 }
-
-// Normal frequency of the grid.
-const STEADY_FREQUENCY: f64 = 50.0;
 
 // Typical loses in a photovoltaic system due to temperature, inverters or cable losses.
 const PV_PERFORMANCE_RATIO: f64 = 0.82;
