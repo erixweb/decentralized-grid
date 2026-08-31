@@ -45,7 +45,7 @@ fn main() {
     let data: PvResponse =
         serde_json::from_reader(reader).expect("Failed to parse JSON. Check file's formatting.");
 
-    let mut grid = grid_builder::create_grid();
+    let mut grid = grid_builder::create_grid("malgrat");
     grid.dbg();
 
     let simulation_duration = 24usize;

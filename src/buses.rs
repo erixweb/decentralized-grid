@@ -18,7 +18,7 @@ pub struct Bus {
     pub frequency: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Deserialize)]
 pub enum BusKind {
     Substation,
     HistoricCenter,
