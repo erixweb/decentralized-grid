@@ -26,6 +26,10 @@ pub enum BusKind {
     Touristic,
     Industrial,
     School,
+    Primary,
+    Construction,
+    Transport,
+    Services,
 }
 
 impl BusKind {
@@ -37,6 +41,10 @@ impl BusKind {
             BusKind::Touristic => "Touristic zone",
             BusKind::Industrial => "Industrial polygon",
             BusKind::School => "School",
+            BusKind::Primary => "Primary zone",
+            BusKind::Construction => "Construction and Public Works",
+            BusKind::Transport => "Transport zone",
+            BusKind::Services => "Services zone",
         }
     }
 }

@@ -11,6 +11,13 @@ mod reporting;
 mod transformers;
 
 fn main() {
+    println!("Enter the city name (e.g., malgrat, badalona):");
+    let mut city_input = String::new();
+    std::io::stdin()
+        .read_line(&mut city_input)
+        .expect("Failed to read line");
+    let city_name = city_input.trim();
+
     println!("Enter the month (1-12):");
     let mut input = String::new();
     std::io::stdin()
@@ -21,6 +28,17 @@ fn main() {
         .trim()
         .parse()
         .expect("Please enter a valid number between 1 and 12");
+
+    println!("Enter cloudiness factor (0.0 = total clouds, 1.0 = clear sky):");
+    let mut cloud_input = String::new();
+    std::io::stdin()
+        .read_line(&mut cloud_input)
+        .expect("Failed to read line");
+
+    let cloudiness_factor: f64 = cloud_input
+        .trim()
+        .parse()
+        .expect("Please enter a valid number (e.g. 0.8)");
 
     let month_label = match month_num {
         1 => "january",
@@ -45,7 +63,7 @@ fn main() {
     let data: PvResponse =
         serde_json::from_reader(reader).expect("Failed to parse JSON. Check file's formatting.");
 
-    let mut grid = grid_builder::create_grid("malgrat");
+    let mut grid = grid_builder::create_grid(city_name);
     grid.dbg();
 
     let simulation_duration = 24usize;
@@ -60,7 +78,7 @@ fn main() {
     println!("=== Simulació horària ===");
     for hour in 0..simulation_duration.min(data.outputs.daily_profile.len()) {
         println!("=== {} ===", month_label);
-        let irradiation = data.outputs.daily_profile[hour].g_i;
+        let irradiation = data.outputs.daily_profile[hour].g_i * cloudiness_factor;
         let report = grid.tick(hour, irradiation);
 
         daily_demand_kwh += report.total_demand_kw; // 1h -> kW == kWh
