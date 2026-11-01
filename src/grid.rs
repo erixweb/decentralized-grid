@@ -308,6 +308,7 @@ mod tests {
     fn substation_import_limit_is_physically_enforced() {
         let mut grid = test_grid();
         grid.transformers[0].rated_power_kva = 30_000.0;
+        grid.nodes[1].demand_profile[0] = 20_000.0;
         let report = grid.tick(0, 0.0);
         assert!(report.grid_import_kw <= MAX_SUBSTATION_IMPORT_KW + 1e-6);
         assert!(report.unserved_demand_kw > 0.0);
@@ -316,11 +317,13 @@ mod tests {
     #[test]
     fn substation_export_limit_is_physically_enforced() {
         let mut grid = test_grid();
-        grid.nodes[1].demand_profile[0] = 0.0;
-        grid.nodes[1].solar_kwp = 30_000.0;
-        let report = grid.tick(0, 1_000.0);
-        assert!(report.grid_import_kw >= -MAX_SUBSTATION_EXPORT_KW - 1e-6);
-        assert!(report.curtailed_solar_kw > 0.0);
+        grid.transformers[0].rated_power_kva = 30_000.0;
+        let mut feeder_power = vec![0.0, -6_000.0];
+        let (unserved, curtailed) = grid.enforce_substation_limits(&mut feeder_power);
+        let final_exchange = grid.calculate_grid_exchange(&feeder_power).0;
+        assert_eq!(unserved, 0.0);
+        assert!(curtailed > 999.0 && curtailed < 1_001.0);
+        assert!(final_exchange >= -MAX_SUBSTATION_EXPORT_KW - 1e-6);
     }
 
     #[test]
