@@ -35,6 +35,37 @@ impl Grid {
         self.lines.iter().find(|l| l.to == bus_id)
     }
 
+    // Match local PV/battery surpluses with deficits before using the transport grid.
+    // Values are bus-terminal kW: positive means surplus, negative means deficit.
+    // This is an idealized market-clearing step; network constraints and peer-trade
+    // transmission losses are not represented yet.
+    fn clear_local_exchange(net_power: &mut [f64]) -> f64 {
+        let mut exchanged_kw = 0.0;
+
+        for seller in 0..net_power.len() {
+            if net_power[seller] <= 0.0 {
+                continue;
+            }
+
+            for buyer in 0..net_power.len() {
+                if net_power[buyer] >= 0.0 {
+                    continue;
+                }
+
+                let traded_kw = net_power[seller].min(-net_power[buyer]);
+                net_power[seller] -= traded_kw;
+                net_power[buyer] += traded_kw;
+                exchanged_kw += traded_kw;
+
+                if net_power[seller] <= 1e-9 {
+                    break;
+                }
+            }
+        }
+
+        exchanged_kw
+    }
+
     pub fn tick(&mut self, hour: usize, irradiation_w_m2: f64) -> HourReport {
         let mut total_demand_kw = 0.0;
         let mut potential_solar_kw = 0.0;
@@ -42,7 +73,7 @@ impl Grid {
         let mut grid_import_kw = 0.0;
         let mut losses_kw = 0.0;
 
-        // First pass: Calculate total demand and potential solar generation
+        // First pass: Calculate total demand and potential solar generation.
         for bus_idx in 0..self.nodes.len() {
             if self.nodes[bus_idx].kind == BusKind::Substation {
                 continue;
@@ -51,20 +82,18 @@ impl Grid {
             potential_solar_kw += self.nodes[bus_idx].solar_generation_at(irradiation_w_m2);
         }
 
-        // Max absorption capacity = Demand + Battery Charge Capacity + Max Export Limit (e.g., 5000 kW)
+        // Max absorption capacity = Demand + Battery Charge Capacity + Max Export Limit.
         let max_export_limit = 5000.0;
         let mut battery_charge_capacity = 0.0;
         for bus in &self.nodes {
             if bus.kind != BusKind::Substation {
-                // Only consider charging if it's not a night charge window (which uses grid)
-                // and if the battery has space.
                 battery_charge_capacity += bus.max_charge_kw;
             }
         }
 
         let max_absorption = total_demand_kw + battery_charge_capacity + max_export_limit;
 
-        // Solar Curtailment: Limit generation to what the grid can handle to stabilize frequency
+        // Solar Curtailment: Limit generation to what the grid can handle.
         let actual_solar_kw = potential_solar_kw.min(max_absorption);
         let curtailment_ratio = if potential_solar_kw > 0.0 {
             actual_solar_kw / potential_solar_kw
@@ -73,31 +102,29 @@ impl Grid {
         };
 
         let mut total_solar_kw = 0.0;
+        let mut net_power_by_bus = vec![0.0; self.nodes.len()];
 
+        // Each node first serves its own demand and uses its own battery.
         for bus_idx in 0..self.nodes.len() {
             if self.nodes[bus_idx].kind == BusKind::Substation {
                 continue;
             }
 
             let demand = self.nodes[bus_idx].demand_at(hour);
-            // Apply curtailment ratio to individual bus generation
             let solar =
                 self.nodes[bus_idx].solar_generation_at(irradiation_w_m2) * curtailment_ratio;
-
-            // Electrical balance
-            let net_value = solar - demand;
             total_solar_kw += solar;
 
+            let net_value = solar - demand;
             let in_night_charge_window = matches!(
                 self.nodes[bus_idx].night_charge_window,
                 Some((start, end)) if hour >= start && hour < end
             );
 
-            let net_after_battery = if in_night_charge_window {
+            let mut net_after_battery = if in_night_charge_window {
                 net_value
             } else if net_value > 0.0 {
                 let (charged, remaining_surplus) = self.nodes[bus_idx].try_charge(net_value);
-
                 total_battery_kw -= charged;
                 remaining_surplus
             } else if net_value < 0.0 {
@@ -109,9 +136,7 @@ impl Grid {
                 if can_discharge {
                     let (discharged, remaining_deficit) =
                         self.nodes[bus_idx].try_discharge(-net_value);
-
                     total_battery_kw += discharged;
-
                     -remaining_deficit
                 } else {
                     net_value
@@ -121,14 +146,24 @@ impl Grid {
             };
 
             let night_charge = self.nodes[bus_idx].try_night_grid_charge(hour);
-
             total_battery_kw -= night_charge;
-            let net_after_battery = net_after_battery - night_charge;
+            net_after_battery -= night_charge;
+            net_power_by_bus[bus_idx] = net_after_battery;
+        }
 
-            // Power exchanged with the Medium Tension grid.
+        // Local exchange is cleared before any remaining power is imported/exported.
+        let local_exchange_kw = Self::clear_local_exchange(&mut net_power_by_bus);
+
+        // Only the residual imbalance at each node reaches its transformer and line.
+        for bus_idx in 0..self.nodes.len() {
+            if self.nodes[bus_idx].kind == BusKind::Substation {
+                continue;
+            }
+
+            let residual_net_power = net_power_by_bus[bus_idx];
             let mv_power_kw = match self.transformer_for(self.nodes[bus_idx].id) {
-                Some(tr) => tr.refer_to_primary(-net_after_battery),
-                None => -net_after_battery,
+                Some(tr) => tr.refer_to_primary(-residual_net_power),
+                None => -residual_net_power,
             };
 
             let line_losses = match self.line_for(self.nodes[bus_idx].id) {
@@ -139,14 +174,10 @@ impl Grid {
             losses_kw += line_losses;
             grid_import_kw += mv_power_kw + line_losses;
         }
-        let max_substation_import_kw = 15000.0;
 
-        // Potencia de respaldo efectivamente importada desde la red de transporte
+        let max_substation_import_kw = 15000.0;
         let effective_import_kw = grid_import_kw.min(max_substation_import_kw);
 
-        // Balanza de potencia no compensada:
-        // Al importar automáticamente la energía requerida por la subestación,
-        // el déficit residual de la red local se reduce a cero.
         let uncompensated_imbalance_kw = (total_solar_kw + total_battery_kw + effective_import_kw)
             - (total_demand_kw + losses_kw);
 
@@ -163,6 +194,7 @@ impl Grid {
             total_demand_kw,
             total_solar_kw,
             total_battery_kw,
+            local_exchange_kw,
             grid_import_kw,
             losses_kw,
             frequency_hz,
@@ -194,5 +226,39 @@ impl Grid {
             );
         }
         println!();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Grid;
+
+    #[test]
+    fn local_surplus_covers_other_nodes_deficit() {
+        let mut net = [100.0, -80.0, -50.0];
+        let exchanged = Grid::clear_local_exchange(&mut net);
+
+        assert!((exchanged - 100.0).abs() < 1e-9);
+        assert!(net.iter().all(|value| *value >= -1e-9));
+        assert!((net.iter().sum::<f64>() + 30.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn local_exchange_preserves_total_power_balance() {
+        let mut net = [75.0, -20.0, 10.0, -90.0];
+        let initial_balance = net.iter().sum::<f64>();
+        Grid::clear_local_exchange(&mut net);
+
+        assert!((net.iter().sum::<f64>() - initial_balance).abs() < 1e-9);
+        assert!((net.iter().filter(|value| **value > 0.0).sum::<f64>() - 0.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn no_trade_when_all_nodes_have_same_balance_sign() {
+        let mut net = [10.0, 20.0, 0.0];
+        let exchanged = Grid::clear_local_exchange(&mut net);
+
+        assert_eq!(exchanged, 0.0);
+        assert_eq!(net, [10.0, 20.0, 0.0]);
     }
 }
