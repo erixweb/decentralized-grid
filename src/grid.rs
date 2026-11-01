@@ -167,6 +167,7 @@ impl Grid {
         let mut curtailed_solar_kw = (potential_solar_kw - actual_solar_kw).max(0.0);
         let mut unserved_demand_kw = 0.0;
         let mut secondary_power_by_bus = vec![0.0; self.nodes.len()];
+        let mut night_grid_charge_by_bus = vec![0.0; self.nodes.len()];
 
         for bus_idx in 0..self.nodes.len() {
             if self.nodes[bus_idx].kind == BusKind::Substation { continue; }
@@ -200,6 +201,7 @@ impl Grid {
 
             let night_charge = self.nodes[bus_idx].try_night_grid_charge(hour);
             total_battery_kw -= night_charge;
+            night_grid_charge_by_bus[bus_idx] = night_charge;
             // Positive means power imported at the bus; negative means exported.
             secondary_power_by_bus[bus_idx] = -net_after_battery + night_charge;
         }
@@ -216,7 +218,13 @@ impl Grid {
                     let excess = requested_kw - active_limit_kw;
                     secondary_power_by_bus[bus_idx] = active_limit_kw;
                     transformer_overload_kw += excess;
-                    unserved_demand_kw += excess;
+                    let curtailed_battery_charge = excess.min(night_grid_charge_by_bus[bus_idx]);
+                    if curtailed_battery_charge > 0.0 {
+                        self.nodes[bus_idx].stored_energy_kwh -= curtailed_battery_charge;
+                        night_grid_charge_by_bus[bus_idx] -= curtailed_battery_charge;
+                        total_battery_kw += curtailed_battery_charge;
+                    }
+                    unserved_demand_kw += excess - curtailed_battery_charge;
                 } else if requested_kw < -active_limit_kw {
                     let excess = -active_limit_kw - requested_kw;
                     secondary_power_by_bus[bus_idx] = -active_limit_kw;
@@ -227,9 +235,22 @@ impl Grid {
         }
 
         // The connection limit is enforced after transformer limits and feeder losses.
+        let requested_secondary_power_by_bus = secondary_power_by_bus.clone();
         let (unserved_at_substation_kw, curtailed_at_substation_kw) =
             self.enforce_substation_limits(&mut secondary_power_by_bus);
-        unserved_demand_kw += unserved_at_substation_kw;
+        let mut curtailed_battery_charge_kw = 0.0;
+        for bus_idx in 0..self.nodes.len() {
+            let requested_import = requested_secondary_power_by_bus[bus_idx].max(0.0);
+            let delivered_import = secondary_power_by_bus[bus_idx].max(0.0);
+            let import_reduction = (requested_import - delivered_import).max(0.0);
+            let curtailed_charge = import_reduction.min(night_grid_charge_by_bus[bus_idx]);
+            if curtailed_charge > 0.0 {
+                self.nodes[bus_idx].stored_energy_kwh -= curtailed_charge;
+                total_battery_kw += curtailed_charge;
+                curtailed_battery_charge_kw += curtailed_charge;
+            }
+        }
+        unserved_demand_kw += (unserved_at_substation_kw - curtailed_battery_charge_kw).max(0.0);
         curtailed_solar_kw += curtailed_at_substation_kw;
 
         let (grid_import_kw, losses_kw) = self.calculate_grid_exchange(&secondary_power_by_bus);
