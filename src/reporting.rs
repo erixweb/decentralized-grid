@@ -15,7 +15,7 @@ pub fn print_hour_report(report: &HourReport) {
     };
 
     println!(
-        "{:02}:00 | Demand {:>7.1} kW | FV {:>7.1} kW | Battery {:>20} | Local exchange {:>7.1} kW | {} | Line losses {:>5.2} kW | f={:.3} Hz",
+        "{:02}:00 | Demand {:>7.1} kW | FV {:>7.1} kW | Battery {:>20} | Local exchange {:>7.1} kW | {} | Technical losses {:>5.2} kW | f={:.3} Hz",
         report.hour,
         report.total_demand_kw,
         report.total_solar_kw,
