@@ -112,7 +112,7 @@ fn main() {
         daily_local_exchange_kwh
     );
     println!(
-        "Pèrdues tècniques a les línies:  {:>9.2} kWh",
+        "Pèrdues tècniques (línies + transformadors):  {:>9.2} kWh",
         daily_losses_kwh
     );
     println!(
