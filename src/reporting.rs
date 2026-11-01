@@ -15,7 +15,7 @@ pub fn print_hour_report(report: &HourReport) {
     };
 
     println!(
-        "{:02}:00 | Demand {:>7.1} kW | FV {:>7.1} kW | Battery {:>20} | Local exchange {:>7.1} kW | {} | Technical losses {:>5.2} kW | f={:.3} Hz",
+        "{:02}:00 | Demand {:>7.1} kW | FV {:>7.1} kW | Battery {:>20} | Local exchange {:>7.1} kW | {} | Losses {:>5.2} kW | Unserved {:>6.1} kW | Curtailed PV {:>6.1} kW | f={:.2} Hz",
         report.hour,
         report.total_demand_kw,
         report.total_solar_kw,
@@ -23,6 +23,8 @@ pub fn print_hour_report(report: &HourReport) {
         report.local_exchange_kw,
         import_label,
         report.losses_kw,
+        report.unserved_demand_kw,
+        report.curtailed_solar_kw,
         report.frequency_hz
     );
 }
@@ -30,7 +32,6 @@ pub fn print_hour_report(report: &HourReport) {
 pub fn write_simulation_data(path: &str, reports: &[HourReport]) {
     let json = serde_json::to_string_pretty(&reports).expect("Failed to serialize simulation data");
     let mut file = File::create(path).expect("Failed to create simulation_data.json");
-    file.write_all(json.as_bytes())
-        .expect("Failed to write simulation_data.json");
+    file.write_all(json.as_bytes()).expect("Failed to write simulation_data.json");
     println!("\nSimulation data written to simulation_data.json");
 }
