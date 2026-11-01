@@ -35,10 +35,11 @@ impl Grid {
         self.lines.iter().find(|l| l.to == bus_id)
     }
 
-    // Match local PV/battery surpluses with deficits before using the transport grid.
+    // Match local PV/battery surpluses with deficits for the peer-exchange indicator.
     // Values are bus-terminal kW: positive means surplus, negative means deficit.
-    // This is an idealized market-clearing step; network constraints and peer-trade
-    // transmission losses are not represented yet.
+    // This matching is an energy-allocation step; it must not erase physical feeder
+    // flows. In the current radial/star topology, a peer trade flows out through the
+    // seller's feeder and back through the buyer's feeder via the MV busbar.
     fn clear_local_exchange(net_power: &mut [f64]) -> f64 {
         let mut exchanged_kw = 0.0;
 
@@ -151,28 +152,37 @@ impl Grid {
             net_power_by_bus[bus_idx] = net_after_battery;
         }
 
-        // Local exchange is cleared before any remaining power is imported/exported.
-        let local_exchange_kw = Self::clear_local_exchange(&mut net_power_by_bus);
+        // Calculate the amount matched between peers on a copy. Keep the original
+        // nodal balances for the physical feeder-flow and loss calculations below.
+        let mut exchange_balances = net_power_by_bus.clone();
+        let local_exchange_kw = Self::clear_local_exchange(&mut exchange_balances);
 
-        // Only the residual imbalance at each node reaches its transformer and line.
+        // In the current star topology every node has its own feeder to the MV busbar.
+        // A peer transfer therefore loads both the exporting and importing feeders.
+        // Calculate transformer and line losses from each node's full pre-trade balance.
         for bus_idx in 0..self.nodes.len() {
             if self.nodes[bus_idx].kind == BusKind::Substation {
                 continue;
             }
 
-            let residual_net_power = net_power_by_bus[bus_idx];
-            let mv_power_kw = match self.transformer_for(self.nodes[bus_idx].id) {
-                Some(tr) => tr.refer_to_primary(-residual_net_power),
-                None => -residual_net_power,
-            };
+            let bus_power_kw = -net_power_by_bus[bus_idx];
+            let (mv_power_kw, transformer_losses_kw) =
+                match self.transformer_for(self.nodes[bus_idx].id) {
+                    Some(tr) => {
+                        let primary_power_kw = tr.refer_to_primary(bus_power_kw);
+                        let transformer_loss_kw = (primary_power_kw - bus_power_kw).abs();
+                        (primary_power_kw, transformer_loss_kw)
+                    }
+                    None => (bus_power_kw, 0.0),
+                };
 
-            let line_losses = match self.line_for(self.nodes[bus_idx].id) {
+            let line_losses_kw = match self.line_for(self.nodes[bus_idx].id) {
                 Some(line) => line.power_loss_kw(mv_power_kw, self.mv_voltage_kv),
                 None => 0.0,
             };
 
-            losses_kw += line_losses;
-            grid_import_kw += mv_power_kw + line_losses;
+            losses_kw += transformer_losses_kw + line_losses_kw;
+            grid_import_kw += mv_power_kw + line_losses_kw;
         }
 
         let max_substation_import_kw = 15000.0;
