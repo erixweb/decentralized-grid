@@ -3,6 +3,11 @@ use crate::lines::Line;
 use crate::models::{HourReport, STEADY_FREQUENCY};
 use crate::transformers::Transformer;
 
+// Simplified grid-connection limits and frequency-response sensitivity.
+const MAX_SUBSTATION_IMPORT_KW: f64 = 15_000.0;
+const MAX_SUBSTATION_EXPORT_KW: f64 = 5_000.0;
+const FREQUENCY_DROOP_HZ_PER_PU: f64 = 2.0;
+
 pub struct Grid {
     pub nodes: Vec<Bus>,
     pub lines: Vec<Line>,
@@ -33,6 +38,28 @@ impl Grid {
     // Check which line is assigned to a certain bus.
     fn line_for(&self, bus_id: usize) -> Option<&Line> {
         self.lines.iter().find(|l| l.to == bus_id)
+    }
+
+    // Estimate frequency from power that cannot be exchanged with the upstream grid.
+    // Positive grid_import_kw means import; negative means export. Within the
+    // connection limits, the upstream grid is treated as a stiff 50 Hz reference.
+    // Outside those limits, unmet import lowers frequency and excess export raises it.
+    fn estimate_frequency(grid_import_kw: f64, total_demand_kw: f64) -> f64 {
+        let power_imbalance_kw = if grid_import_kw > MAX_SUBSTATION_IMPORT_KW {
+            -(grid_import_kw - MAX_SUBSTATION_IMPORT_KW)
+        } else if grid_import_kw < -MAX_SUBSTATION_EXPORT_KW {
+            -MAX_SUBSTATION_EXPORT_KW - grid_import_kw
+        } else {
+            0.0
+        };
+
+        let imbalance_ratio = if total_demand_kw > 0.0 {
+            power_imbalance_kw / total_demand_kw
+        } else {
+            0.0
+        };
+
+        STEADY_FREQUENCY + imbalance_ratio * FREQUENCY_DROOP_HZ_PER_PU
     }
 
     // Match local PV/battery surpluses with deficits for the peer-exchange indicator.
@@ -83,8 +110,8 @@ impl Grid {
             potential_solar_kw += self.nodes[bus_idx].solar_generation_at(irradiation_w_m2);
         }
 
-        // Max absorption capacity = Demand + Battery Charge Capacity + Max Export Limit.
-        let max_export_limit = 5000.0;
+        // Maximum solar absorption includes local demand, battery charging and
+        // the permitted export capacity of the substation.
         let mut battery_charge_capacity = 0.0;
         for bus in &self.nodes {
             if bus.kind != BusKind::Substation {
@@ -92,7 +119,8 @@ impl Grid {
             }
         }
 
-        let max_absorption = total_demand_kw + battery_charge_capacity + max_export_limit;
+        let max_absorption =
+            total_demand_kw + battery_charge_capacity + MAX_SUBSTATION_EXPORT_KW;
 
         // Solar Curtailment: Limit generation to what the grid can handle.
         let actual_solar_kw = potential_solar_kw.min(max_absorption);
@@ -185,19 +213,10 @@ impl Grid {
             grid_import_kw += mv_power_kw + line_losses_kw;
         }
 
-        let max_substation_import_kw = 15000.0;
-        let effective_import_kw = grid_import_kw.min(max_substation_import_kw);
-
-        let uncompensated_imbalance_kw = (total_solar_kw + total_battery_kw + effective_import_kw)
-            - (total_demand_kw + losses_kw);
-
-        let imbalance_ratio = if total_demand_kw > 0.0 {
-            uncompensated_imbalance_kw / total_demand_kw
-        } else {
-            0.0
-        };
-
-        let frequency_hz = STEADY_FREQUENCY + imbalance_ratio * 2.0;
+        // Do not use grid_import_kw to close the energy balance before estimating
+        // frequency: that would make the residual zero by construction. Frequency
+        // only deviates when the requested exchange exceeds the substation limits.
+        let frequency_hz = Self::estimate_frequency(grid_import_kw, total_demand_kw);
 
         HourReport {
             hour,
@@ -242,6 +261,8 @@ impl Grid {
 #[cfg(test)]
 mod tests {
     use super::Grid;
+    use super::{MAX_SUBSTATION_EXPORT_KW, MAX_SUBSTATION_IMPORT_KW};
+    use crate::models::STEADY_FREQUENCY;
 
     #[test]
     fn local_surplus_covers_other_nodes_deficit() {
@@ -270,5 +291,37 @@ mod tests {
 
         assert_eq!(exchanged, 0.0);
         assert_eq!(net, [10.0, 20.0, 0.0]);
+    }
+
+    #[test]
+    fn frequency_is_nominal_within_substation_limits() {
+        assert_eq!(
+            Grid::estimate_frequency(10_000.0, 10_000.0),
+            STEADY_FREQUENCY
+        );
+        assert_eq!(
+            Grid::estimate_frequency(-MAX_SUBSTATION_EXPORT_KW, 10_000.0),
+            STEADY_FREQUENCY
+        );
+    }
+
+    #[test]
+    fn frequency_falls_when_import_capacity_is_exceeded() {
+        let frequency = Grid::estimate_frequency(
+            MAX_SUBSTATION_IMPORT_KW + 1_000.0,
+            10_000.0,
+        );
+
+        assert!((frequency - 49.8).abs() < 1e-9);
+    }
+
+    #[test]
+    fn frequency_rises_when_export_capacity_is_exceeded() {
+        let frequency = Grid::estimate_frequency(
+            -(MAX_SUBSTATION_EXPORT_KW + 1_000.0),
+            10_000.0,
+        );
+
+        assert!((frequency - 50.2).abs() < 1e-9);
     }
 }
