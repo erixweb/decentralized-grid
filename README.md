@@ -1,41 +1,50 @@
 # Decentralized Electrical Grid Simulation
 
-A simulation based on **real-world data**, solar global irradiation from PV_GIS, energy consumption data and line losses.
+A simplified educational simulation using real-world solar irradiation data from PVGIS, estimated electricity demand, photovoltaic generation, battery dispatch and network losses.
 
 ## Setup
 
-To install the repository locally run this command using Git:
+Clone the repository:
 
 ```bash
 git clone https://github.com/erixweb/decentralized-grid
 ```
 
-To modify nodes, go to function create_grid() in `src/main.rs` and change the values there.
+To modify nodes, edit the city configuration in `cities/`.
 
 ## Local energy exchange
 
-At each simulated hour, every node first uses its own photovoltaic generation to serve its demand and, where configured, charges or discharges its local battery. The remaining surpluses and deficits are matched to calculate the reported `local_exchange_kw` indicator.
+At each simulated hour, each node first uses its photovoltaic generation to serve local demand and, where configured, charges or discharges its local battery. Remaining surpluses and deficits are matched to calculate `local_exchange_kw`.
 
-The exchange matching is an idealized, deterministic surplus-first allocation. It does not change the physical net power at each node. This distinction is important for the current city configurations: each node is connected to the MV substation by its own radial feeder. A transfer between two nodes therefore still loads the seller's feeder (export) and the buyer's feeder (import); it must not be removed before calculating their feeder flows and losses.
+The matching is an idealized allocation indicator, not a financial market or a model of direct physical peer-to-peer routing. The current city configurations use independent radial feeders connected to a common MV substation.
 
-For each node, the simulator calculates:
-- Transformer primary-side power using the configured transformer efficiency. The difference between primary- and secondary-side power is counted as transformer loss, for both import and export.
-- Three-phase line losses using `P_loss = 3 R I²`, with current estimated from the absolute primary-side power, MV voltage and a fixed power factor of 0.95.
-- Net exchange with the transport grid after feeder line losses.
+## Transformer and substation capacity limits
+
+Transformer active-power capacity is approximated as:
+
+`P_limit = rated_power_kva × 0.95`
+
+The 0.95 power factor is the same fixed assumption used in the line-current calculation. Import above a transformer's limit is recorded as `unserved_demand_kw`; export above the limit is recorded as `curtailed_solar_kw`. `transformer_overload_kw` reports the requested power in excess of transformer ratings before it is shed or curtailed.
+
+The substation connection limits are 15,000 kW import and 5,000 kW export. They are enforced after transformer limits and feeder losses. If an aggregate limit is exceeded, the simulator proportionally reduces the relevant direction of power flow using a numerical search. The reduced import is counted as unserved demand; the reduced export is counted as curtailed generation. The final `grid_import_kw` therefore respects the configured connection limits (within numerical tolerance).
+
+The simulation reports transformer and feeder losses separately as a combined `losses_kw` value. Transformer efficiency is constant and feeder losses use a balanced three-phase approximation:
+
+`P_loss = 3 R I²`
+
+with fixed power factor 0.95, nominal voltage and copper resistivity at a reference temperature.
 
 ## Frequency model
 
-The upstream grid is treated as a stiff 50 Hz reference while the requested power exchange remains within the substation connection limits (15,000 kW import and 5,000 kW export). Frequency deviates only when the requested import or export exceeds those limits: an import shortfall lowers the estimated frequency, while excess generation that cannot be exported raises it. The deviation is a simplified proportional response, using 2 Hz per unit of unmet power relative to total demand.
-
-This avoids calculating frequency from a residual that already includes the grid import needed to balance demand, which would force the residual to approximately zero every hour.
-
-**This is an educational approximation, not a dynamic frequency-stability model.** It does not simulate generator inertia, governor response, primary/secondary frequency control, or frequency disturbances in the upstream transmission grid. Therefore a result of exactly 50 Hz during normal operation is expected and physically consistent with the assumed grid-connected model.
+The upstream transmission system is treated as a stiff 50 Hz reference, so `frequency_hz` remains 50 Hz. This is intentional: a static hourly energy-balance model cannot calculate grid frequency deviations. A credible frequency model would require at least generator/inverter response, system inertia, control dynamics and time-dependent disturbances. The previous heuristic frequency deviation has therefore been removed rather than presenting it as a physical result.
 
 ## Model assumptions and limitations
 
-- The network is currently represented as independent radial feeders connected to a common MV substation; actual peer-to-peer routes and meshed power flows are not modelled.
-- Local exchange is an energy-allocation indicator, not a physical direct transfer or a financial market. Network congestion and voltage constraints are not represented.
-- Line losses assume a balanced three-phase system, fixed power factor, copper resistivity at the reference temperature, and nominal voltage.
-- Transformer losses are approximated from the configured constant efficiency; no-load and load-dependent loss components are not separated, and rated-power limits are not enforced.
+- The network is represented as independent radial feeders connected to a common MV substation; meshed power flows and direct peer-to-peer routes are not modelled.
+- Transformer limits are enforced using a fixed power factor approximation; transformer thermal dynamics and voltage regulation are not represented.
+- Line losses assume a balanced three-phase system, fixed power factor, nominal voltage and constant conductor resistivity.
+- No nodal voltage solution, reactive-power flow, line thermal ampacity, or AC load-flow solution is calculated.
+- Battery charge/discharge efficiencies and degradation are not modelled; initial state of charge is zero.
+- Hourly frequency is a fixed upstream reference, not a dynamic stability calculation.
 
 This is an educational energy-balance approximation, not a full AC load-flow simulation.
