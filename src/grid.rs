@@ -240,6 +240,11 @@ impl Grid {
             self.enforce_substation_limits(&mut secondary_power_by_bus);
         let mut curtailed_battery_charge_kw = 0.0;
         for bus_idx in 0..self.nodes.len() {
+            let requested_export = (-requested_secondary_power_by_bus[bus_idx]).max(0.0);
+            let delivered_export = (-secondary_power_by_bus[bus_idx]).max(0.0);
+            let curtailed_export = (requested_export - delivered_export).max(0.0);
+            total_solar_kw = (total_solar_kw - curtailed_export).max(0.0);
+
             let requested_import = requested_secondary_power_by_bus[bus_idx].max(0.0);
             let delivered_import = secondary_power_by_bus[bus_idx].max(0.0);
             let import_reduction = (requested_import - delivered_import).max(0.0);
