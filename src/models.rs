@@ -62,14 +62,10 @@ pub struct Outputs {
 pub struct DailyProfile {
     pub month: u8,
     pub time: String,
-
-    // Serde rename handles the parentheses in the JSON keys
     #[serde(rename = "G(i)")]
     pub g_i: f64,
-
     #[serde(rename = "Gb(i)")]
     pub gb_i: f64,
-
     #[serde(rename = "Gd(i)")]
     pub gd_i: f64,
 }
@@ -79,9 +75,13 @@ pub struct HourReport {
     pub hour: usize,
     pub total_demand_kw: f64,
     pub total_solar_kw: f64,
-    pub total_battery_kw: f64, // Positive -> discharging | Negative -> charging
-    pub grid_import_kw: f64,   // Positive -> Import | Negative -> Export
+    pub total_battery_kw: f64,
+    pub local_exchange_kw: f64,
+    pub grid_import_kw: f64,
     pub losses_kw: f64,
+    pub unserved_demand_kw: f64,
+    pub curtailed_solar_kw: f64,
+    pub transformer_overload_kw: f64,
     pub frequency_hz: f64,
 }
 
