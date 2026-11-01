@@ -71,6 +71,7 @@ fn main() {
     let mut daily_solar_kwh = 0.0;
     let mut daily_losses_kwh = 0.0;
     let mut daily_import_kwh = 0.0;
+    let mut daily_local_exchange_kwh = 0.0;
     let mut peak_import_kw = f64::MIN;
     let mut peak_export_kw = f64::MIN;
     let mut reports: Vec<models::HourReport> = Vec::new();
@@ -81,10 +82,11 @@ fn main() {
         let irradiation = data.outputs.daily_profile[hour].g_i * cloudiness_factor;
         let report = grid.tick(hour, irradiation);
 
-        daily_demand_kwh += report.total_demand_kw; // 1h -> kW == kWh
+        daily_demand_kwh += report.total_demand_kw;
         daily_solar_kwh += report.total_solar_kw;
         daily_losses_kwh += report.losses_kw;
         daily_import_kwh += report.grid_import_kw;
+        daily_local_exchange_kwh += report.local_exchange_kw;
         peak_import_kw = peak_import_kw.max(report.grid_import_kw);
         peak_export_kw = peak_export_kw.max(-report.grid_import_kw);
 
@@ -104,6 +106,10 @@ fn main() {
     println!(
         "Autoconsum solar (% demanda):    {:>8.1} %",
         100.0 * daily_solar_kwh / daily_demand_kwh
+    );
+    println!(
+        "Energia intercanviada localment: {:>9.1} kWh",
+        daily_local_exchange_kwh
     );
     println!(
         "Pèrdues tècniques a les línies:  {:>9.2} kWh",
