@@ -48,7 +48,7 @@ fn main() {
     let mut daily_import_kwh = 0.0;
     let mut daily_local_exchange_kwh = 0.0;
     let mut daily_unserved_kwh = 0.0;
-    let mut daily_curtailed_solar_kwh = 0.0;
+    let mut daily_curtailed_generation_kwh = 0.0;
     let mut peak_import_kw = f64::MIN;
     let mut peak_export_kw = f64::MIN;
     let mut reports: Vec<models::HourReport> = Vec::new();
@@ -83,7 +83,7 @@ fn main() {
     println!("Energia intercanviada localment:  {:>9.1} kWh", daily_local_exchange_kwh);
     println!("Pèrdues tècniques:                {:>9.2} kWh", daily_losses_kwh);
     println!("Demanda no servida:               {:>9.2} kWh", daily_unserved_kwh);
-    println!("Generació FV retallada:           {:>9.2} kWh", daily_curtailed_solar_kwh);
+    println!("Generació retallada:           {:>9.2} kWh", daily_curtailed_solar_kwh);
     println!("Balanç net amb xarxa transport:   {:>9.1} kWh ({})",
         daily_import_kwh,
         if daily_import_kwh >= 0.0 { "importador net" } else { "exportador net" });
