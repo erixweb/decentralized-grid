@@ -168,6 +168,7 @@ impl Grid {
         } else { 1.0 };
         let mut total_solar_kw = 0.0;
         let mut total_generation_kw = 0.0;
+        let mut total_dispatchable_generation_kw = 0.0;
         let mut curtailed_generation_kw = (potential_solar_kw - actual_solar_kw).max(0.0);
         let mut unserved_demand_kw = 0.0;
         let mut secondary_power_by_bus = vec![0.0; self.nodes.len()];
@@ -180,6 +181,7 @@ impl Grid {
             let solar = self.nodes[bus_idx].solar_generation_at(irradiation_w_m2) * curtailment_ratio;
             total_solar_kw += solar;
             let generator = self.nodes[bus_idx].generation_profile_kw[hour];
+            total_dispatchable_generation_kw += generator;
             total_generation_kw += solar + generator;
             let net_value = solar + generator - demand;
             let in_night_charge_window = matches!(
@@ -277,6 +279,7 @@ impl Grid {
             hour,
             total_demand_kw,
             total_solar_kw,
+            total_dispatchable_generation_kw,
             total_generation_kw,
             total_battery_kw,
             local_exchange_kw,
