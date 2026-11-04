@@ -236,7 +236,6 @@ impl Grid {
                     secondary_power_by_bus[bus_idx] = -active_limit_kw;
                     transformer_overload_kw += excess;
                     curtailed_generation_kw += excess;
-                    total_generation_kw = (total_generation_kw - excess).max(0.0);
                 }
             }
         }
@@ -250,7 +249,6 @@ impl Grid {
             let requested_export = (-requested_secondary_power_by_bus[bus_idx]).max(0.0);
             let delivered_export = (-secondary_power_by_bus[bus_idx]).max(0.0);
             let curtailed_export = (requested_export - delivered_export).max(0.0);
-            total_generation_kw = (total_generation_kw - curtailed_export).max(0.0);
 
             let requested_import = requested_secondary_power_by_bus[bus_idx].max(0.0);
             let delivered_import = secondary_power_by_bus[bus_idx].max(0.0);
