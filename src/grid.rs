@@ -154,7 +154,9 @@ impl Grid {
             if bus.kind == BusKind::Substation { continue; }
             total_demand_kw += bus.demand_at(hour);
             potential_solar_kw += bus.solar_generation_at(irradiation_w_m2);
-            potential_generator_kw += bus.generation_profile_kw[hour];
+            if bus.kind == BusKind::Generator {
+                potential_generator_kw += bus.generation_profile_kw[hour];
+            }
         }
 
         let battery_charge_capacity: f64 = self.nodes.iter()
@@ -180,7 +182,11 @@ impl Grid {
             let demand = self.nodes[bus_idx].demand_at(hour);
             let solar = self.nodes[bus_idx].solar_generation_at(irradiation_w_m2) * curtailment_ratio;
             total_solar_kw += solar;
-            let generator = self.nodes[bus_idx].generation_profile_kw[hour];
+            let generator = if self.nodes[bus_idx].kind == BusKind::Generator {
+                self.nodes[bus_idx].generation_profile_kw[hour]
+            } else {
+                0.0
+            };
             total_dispatchable_generation_kw += generator;
             total_generation_kw += solar + generator;
             let net_value = solar + generator - demand;
