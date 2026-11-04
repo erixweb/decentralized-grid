@@ -12,6 +12,30 @@ git clone https://github.com/erixweb/decentralized-grid
 
 To modify nodes, edit the city configuration in `cities/`.
 
+### Generator-only nodes
+
+A city can optionally define dispatchable generation (for example, a nuclear or thermal plant) by adding `"kind": "Generator"` to a bus and an optional `generation_profile_kw` array containing 24 hourly power values in kW. Generator buses are treated as generation-only: configured demand, rooftop PV and battery settings are ignored and their demand is always zero. Omit `generation_profile_kw` on other buses; existing city files remain compatible.
+
+```json
+{
+  "id": 6,
+  "name": "Thermal power plant",
+  "kind": "Generator",
+  "voltage_kv": 25.0,
+  "demand_profile": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  "generation_profile_kw": [500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500],
+  "roof_area_ha": 0.0,
+  "storable_energy_kwh": 0.0,
+  "max_charge_kw": 0.0,
+  "max_discharge_kw": 0.0,
+  "night_charge_window": null,
+  "night_charge_target_percent": 0.0,
+  "discharge_window": null
+}
+```
+
+Connect the generator bus to the MV substation with a line and transformer rated for its expected output. Generation is included in the hourly energy balance, local exchange, feeder losses and substation export constraints. `total_generation_kw` reports PV plus dispatchable generation; `curtailed_generation_kw` reports generation curtailed by network limits.
+
 ## Local energy exchange
 
 At each simulated hour, each node first uses its photovoltaic generation to serve local demand and, where configured, charges or discharges its local battery. Remaining surpluses and deficits are matched to calculate `local_exchange_kw`.
