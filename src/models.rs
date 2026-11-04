@@ -82,6 +82,7 @@ pub struct HourReport {
     pub losses_kw: f64,
     pub unserved_demand_kw: f64,
     pub curtailed_solar_kw: f64,
+    pub curtailed_generation_kw: f64,
     pub transformer_overload_kw: f64,
     pub frequency_hz: f64,
 }
