@@ -66,7 +66,7 @@ fn main() {
         daily_import_kwh += report.grid_import_kw;
         daily_local_exchange_kwh += report.local_exchange_kw;
         daily_unserved_kwh += report.unserved_demand_kw;
-        daily_curtailed_solar_kwh += report.curtailed_solar_kw;
+        daily_curtailed_generation_kwh += report.curtailed_generation_kw;
         peak_import_kw = peak_import_kw.max(report.grid_import_kw);
         peak_export_kw = peak_export_kw.max(-report.grid_import_kw);
 
@@ -83,7 +83,7 @@ fn main() {
     println!("Energia intercanviada localment:  {:>9.1} kWh", daily_local_exchange_kwh);
     println!("Pèrdues tècniques:                {:>9.2} kWh", daily_losses_kwh);
     println!("Demanda no servida:               {:>9.2} kWh", daily_unserved_kwh);
-    println!("Generació retallada:           {:>9.2} kWh", daily_curtailed_solar_kwh);
+    println!("Generació retallada:           {:>9.2} kWh", daily_curtailed_generation_kwh);
     println!("Balanç net amb xarxa transport:   {:>9.1} kWh ({})",
         daily_import_kwh,
         if daily_import_kwh >= 0.0 { "importador net" } else { "exportador net" });
