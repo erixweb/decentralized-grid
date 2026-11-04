@@ -82,6 +82,7 @@ impl Bus {
             max_charge_kw,
             max_discharge_kw,
             solar_kwp,
+            generation_profile_kw: [0.0; 24],
             night_charge_window,
             night_charge_target_percent,
             discharge_window,
