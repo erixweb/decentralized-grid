@@ -43,6 +43,7 @@ fn main() {
     let simulation_duration = 24usize;
     let mut daily_demand_kwh = 0.0;
     let mut daily_solar_kwh = 0.0;
+    let mut daily_generation_kwh = 0.0;
     let mut daily_losses_kwh = 0.0;
     let mut daily_import_kwh = 0.0;
     let mut daily_local_exchange_kwh = 0.0;
@@ -60,6 +61,7 @@ fn main() {
 
         daily_demand_kwh += report.total_demand_kw;
         daily_solar_kwh += report.total_solar_kw;
+        daily_generation_kwh += report.total_generation_kw;
         daily_losses_kwh += report.losses_kw;
         daily_import_kwh += report.grid_import_kw;
         daily_local_exchange_kwh += report.local_exchange_kw;
@@ -75,6 +77,7 @@ fn main() {
     println!("\n=== Resum diari ===");
     println!("Demanda total:                    {:>9.1} kWh", daily_demand_kwh);
     println!("Generació fotovoltaica:           {:>9.1} kWh", daily_solar_kwh);
+    println!("Generació total:                  {:>9.1} kWh", daily_generation_kwh);
     println!("Cobertura solar sobre demanda:    {:>8.1} %",
         if daily_demand_kwh > 0.0 { 100.0 * daily_solar_kwh / daily_demand_kwh } else { 0.0 });
     println!("Energia intercanviada localment:  {:>9.1} kWh", daily_local_exchange_kwh);
