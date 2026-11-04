@@ -25,7 +25,7 @@ pub fn print_hour_report(report: &HourReport) {
         import_label,
         report.losses_kw,
         report.unserved_demand_kw,
-        report.curtailed_solar_kw,
+        report.curtailed_generation_kw,
         report.frequency_hz
     );
 }
