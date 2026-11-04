@@ -12,16 +12,26 @@ struct BusConfig {
     name: String,
     kind: BusKind,
     voltage_kv: f64,
+    #[serde(default = "zero_profile")]
     demand_profile: [f64; 24],
     #[serde(default)]
     generation_profile_kw: Option<[f64; 24]>,
+    #[serde(default)]
     roof_area_ha: f64,
+    #[serde(default)]
     storable_energy_kwh: f64,
+    #[serde(default)]
     max_charge_kw: f64,
+    #[serde(default)]
     max_discharge_kw: f64,
     night_charge_window: Option<(usize, usize)>,
+    #[serde(default)]
     night_charge_target_percent: f64,
     discharge_window: Option<(usize, usize)>,
+}
+
+fn zero_profile() -> [f64; 24] {
+    [0.0; 24]
 }
 
 #[derive(Deserialize)]
