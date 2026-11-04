@@ -13,6 +13,8 @@ struct BusConfig {
     kind: BusKind,
     voltage_kv: f64,
     demand_profile: [f64; 24],
+    #[serde(default)]
+    generation_profile_kw: Option<[f64; 24]>,
     roof_area_ha: f64,
     storable_energy_kwh: f64,
     max_charge_kw: f64,
@@ -64,7 +66,7 @@ pub fn create_grid(city_name: &str) -> Grid {
         .into_iter()
         .map(|b| {
             let solar_kwp = b.roof_area_ha * USEFUL_ROOF_PERCENTAGE * SOLAR_COVERAGE * KWP_PER_HA;
-            Bus::new(
+            let mut bus = Bus::new(
                 b.id,
                 &b.name,
                 b.kind,
@@ -77,7 +79,9 @@ pub fn create_grid(city_name: &str) -> Grid {
                 b.night_charge_window,
                 b.night_charge_target_percent,
                 b.discharge_window,
-            )
+            );
+            bus.generation_profile_kw = b.generation_profile_kw.unwrap_or([0.0; 24]);
+            bus
         })
         .collect();
 
