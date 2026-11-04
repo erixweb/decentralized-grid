@@ -168,8 +168,7 @@ impl Grid {
         } else { 1.0 };
         let mut total_solar_kw = 0.0;
         let mut total_generation_kw = 0.0;
-        let mut curtailed_solar_kw = (potential_solar_kw - actual_solar_kw).max(0.0);
-        let mut curtailed_generation_kw = curtailed_solar_kw;
+        let mut curtailed_generation_kw = (potential_solar_kw - actual_solar_kw).max(0.0);
         let mut unserved_demand_kw = 0.0;
         let mut secondary_power_by_bus = vec![0.0; self.nodes.len()];
         let mut night_grid_charge_by_bus = vec![0.0; self.nodes.len()];
@@ -250,7 +249,6 @@ impl Grid {
             let requested_export = (-requested_secondary_power_by_bus[bus_idx]).max(0.0);
             let delivered_export = (-secondary_power_by_bus[bus_idx]).max(0.0);
             let curtailed_export = (requested_export - delivered_export).max(0.0);
-            total_solar_kw = (total_solar_kw - curtailed_export).max(0.0);
             total_generation_kw = (total_generation_kw - curtailed_export).max(0.0);
 
             let requested_import = requested_secondary_power_by_bus[bus_idx].max(0.0);
@@ -265,7 +263,6 @@ impl Grid {
         }
         unserved_demand_kw += (unserved_at_substation_kw - curtailed_battery_charge_kw).max(0.0);
         curtailed_generation_kw += curtailed_at_substation_kw;
-        curtailed_solar_kw = curtailed_generation_kw;
 
         let (grid_import_kw, losses_kw) = self.calculate_grid_exchange(&secondary_power_by_bus);
 
@@ -361,6 +358,18 @@ mod tests {
         assert_eq!(unserved, 0.0);
         assert!(curtailed > 999.0 && curtailed < 1_001.0);
         assert!(final_exchange >= -MAX_SUBSTATION_EXPORT_KW - 1e-6);
+    }
+
+    #[test]
+    fn generator_only_bus_supplies_power_without_creating_demand() {
+        let mut grid = test_grid();
+        grid.nodes[1].kind = BusKind::Generator;
+        grid.nodes[1].demand_profile = [0.0; 24];
+        grid.nodes[1].generation_profile_kw[0] = 1_000.0;
+        let report = grid.tick(0, 0.0);
+        assert_eq!(report.total_demand_kw, 0.0);
+        assert!((report.total_generation_kw - 1_000.0).abs() < 1e-6);
+        assert!((report.grid_import_kw + 1_000.0).abs() < 1e-6);
     }
 
     #[test]
