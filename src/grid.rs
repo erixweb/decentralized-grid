@@ -147,24 +147,31 @@ impl Grid {
     pub fn tick(&mut self, hour: usize, irradiation_w_m2: f64) -> HourReport {
         let mut total_demand_kw = 0.0;
         let mut potential_solar_kw = 0.0;
+        let mut potential_generator_kw = 0.0;
         let mut total_battery_kw = 0.0;
 
         for bus in &self.nodes {
             if bus.kind == BusKind::Substation { continue; }
             total_demand_kw += bus.demand_at(hour);
             potential_solar_kw += bus.solar_generation_at(irradiation_w_m2);
+            if bus.kind == BusKind::Generator {
+                potential_generator_kw += bus.generation_profile_kw[hour];
+            }
         }
 
         let battery_charge_capacity: f64 = self.nodes.iter()
             .filter(|bus| bus.kind != BusKind::Substation)
             .map(|bus| bus.max_charge_kw).sum();
-        let max_absorption = total_demand_kw + battery_charge_capacity + MAX_SUBSTATION_EXPORT_KW;
+        let max_absorption = (total_demand_kw + battery_charge_capacity + MAX_SUBSTATION_EXPORT_KW
+            - potential_generator_kw).max(0.0);
         let actual_solar_kw = potential_solar_kw.min(max_absorption);
         let curtailment_ratio = if potential_solar_kw > 0.0 {
             actual_solar_kw / potential_solar_kw
         } else { 1.0 };
         let mut total_solar_kw = 0.0;
-        let mut curtailed_solar_kw = (potential_solar_kw - actual_solar_kw).max(0.0);
+        let mut total_generation_kw = 0.0;
+        let mut total_dispatchable_generation_kw = 0.0;
+        let mut curtailed_generation_kw = (potential_solar_kw - actual_solar_kw).max(0.0);
         let mut unserved_demand_kw = 0.0;
         let mut secondary_power_by_bus = vec![0.0; self.nodes.len()];
         let mut night_grid_charge_by_bus = vec![0.0; self.nodes.len()];
@@ -175,7 +182,14 @@ impl Grid {
             let demand = self.nodes[bus_idx].demand_at(hour);
             let solar = self.nodes[bus_idx].solar_generation_at(irradiation_w_m2) * curtailment_ratio;
             total_solar_kw += solar;
-            let net_value = solar - demand;
+            let generator = if self.nodes[bus_idx].kind == BusKind::Generator {
+                self.nodes[bus_idx].generation_profile_kw[hour]
+            } else {
+                0.0
+            };
+            total_dispatchable_generation_kw += generator;
+            total_generation_kw += solar + generator;
+            let net_value = solar + generator - demand;
             let in_night_charge_window = matches!(
                 self.nodes[bus_idx].night_charge_window,
                 Some((start, end)) if hour >= start && hour < end
@@ -229,7 +243,7 @@ impl Grid {
                     let excess = -active_limit_kw - requested_kw;
                     secondary_power_by_bus[bus_idx] = -active_limit_kw;
                     transformer_overload_kw += excess;
-                    curtailed_solar_kw += excess;
+                    curtailed_generation_kw += excess;
                 }
             }
         }
@@ -243,7 +257,6 @@ impl Grid {
             let requested_export = (-requested_secondary_power_by_bus[bus_idx]).max(0.0);
             let delivered_export = (-secondary_power_by_bus[bus_idx]).max(0.0);
             let curtailed_export = (requested_export - delivered_export).max(0.0);
-            total_solar_kw = (total_solar_kw - curtailed_export).max(0.0);
 
             let requested_import = requested_secondary_power_by_bus[bus_idx].max(0.0);
             let delivered_import = secondary_power_by_bus[bus_idx].max(0.0);
@@ -256,7 +269,7 @@ impl Grid {
             }
         }
         unserved_demand_kw += (unserved_at_substation_kw - curtailed_battery_charge_kw).max(0.0);
-        curtailed_solar_kw += curtailed_at_substation_kw;
+        curtailed_generation_kw += curtailed_at_substation_kw;
 
         let (grid_import_kw, losses_kw) = self.calculate_grid_exchange(&secondary_power_by_bus);
 
@@ -272,12 +285,15 @@ impl Grid {
             hour,
             total_demand_kw,
             total_solar_kw,
+            total_dispatchable_generation_kw,
+            total_generation_kw,
             total_battery_kw,
             local_exchange_kw,
             grid_import_kw,
             losses_kw,
             unserved_demand_kw,
-            curtailed_solar_kw,
+            curtailed_solar_kw: curtailed_generation_kw,
+            curtailed_generation_kw,
             transformer_overload_kw,
             frequency_hz,
         }
@@ -350,6 +366,29 @@ mod tests {
         assert_eq!(unserved, 0.0);
         assert!(curtailed > 999.0 && curtailed < 1_001.0);
         assert!(final_exchange >= -MAX_SUBSTATION_EXPORT_KW - 1e-6);
+    }
+
+    #[test]
+    fn generator_only_bus_supplies_power_without_creating_demand() {
+        let mut grid = test_grid();
+        grid.nodes[1].kind = BusKind::Generator;
+        grid.nodes[1].demand_profile = [0.0; 24];
+        grid.nodes[1].generation_profile_kw[0] = 1_000.0;
+        grid.transformers[0].rated_power_kva = 2_000.0;
+        let report = grid.tick(0, 0.0);
+        assert_eq!(report.total_demand_kw, 0.0);
+        assert!((report.total_generation_kw - 1_000.0).abs() < 1e-6);
+        assert!((report.grid_import_kw + 1_000.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn dispatchable_profile_is_ignored_on_non_generator_buses() {
+        let mut grid = test_grid();
+        grid.nodes[1].generation_profile_kw[0] = 750.0;
+        let report = grid.tick(0, 0.0);
+        assert_eq!(report.total_dispatchable_generation_kw, 0.0);
+        assert_eq!(report.total_generation_kw, 0.0);
+        assert!(report.grid_import_kw > 0.0);
     }
 
     #[test]

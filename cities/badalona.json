@@ -98,6 +98,14 @@
       "night_charge_window": null,
       "night_charge_target_percent": 0.0,
       "discharge_window": null
+    },
+    {
+      "id": 7,
+      "name": "Thermal power plant",
+      "kind": "Generator",
+      "voltage_kv": 25.0,
+      "demand_profile": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      "generation_profile_kw": [500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 500.0]
     }
   ],
   "lines": [
@@ -106,7 +114,8 @@
     { "id": 3, "from": 0, "to": 3, "distance_km": 1.8, "cross_section_mm2": 150.0 },
     { "id": 4, "from": 0, "to": 4, "distance_km": 2.0, "cross_section_mm2": 150.0 },
     { "id": 5, "from": 0, "to": 5, "distance_km": 1.5, "cross_section_mm2": 240.0 },
-    { "id": 6, "from": 0, "to": 6, "distance_km": 1.1, "cross_section_mm2": 240.0 }
+    { "id": 6, "from": 0, "to": 6, "distance_km": 1.1, "cross_section_mm2": 240.0 },
+    { "id": 7, "from": 0, "to": 7, "distance_km": 2.8, "cross_section_mm2": 240.0 }
   ],
   "transformers": [
     { "id": 1, "from": 0, "to": 1, "rated_power_kva": 250.0, "efficiency": 0.97 },
@@ -114,6 +123,7 @@
     { "id": 3, "from": 0, "to": 3, "rated_power_kva": 800.0, "efficiency": 0.98 },
     { "id": 4, "from": 0, "to": 4, "rated_power_kva": 2000.0, "efficiency": 0.98 },
     { "id": 5, "from": 0, "to": 5, "rated_power_kva": 35000.0, "efficiency": 0.985 },
-    { "id": 6, "from": 0, "to": 6, "rated_power_kva": 35000.0, "efficiency": 0.98 }
+    { "id": 6, "from": 0, "to": 6, "rated_power_kva": 35000.0, "efficiency": 0.98 },
+    { "id": 7, "from": 0, "to": 7, "rated_power_kva": 35000.0, "efficiency": 0.98 }
   ]
 }

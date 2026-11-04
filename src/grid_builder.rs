@@ -12,14 +12,26 @@ struct BusConfig {
     name: String,
     kind: BusKind,
     voltage_kv: f64,
+    #[serde(default = "zero_profile")]
     demand_profile: [f64; 24],
+    #[serde(default)]
+    generation_profile_kw: Option<[f64; 24]>,
+    #[serde(default)]
     roof_area_ha: f64,
+    #[serde(default)]
     storable_energy_kwh: f64,
+    #[serde(default)]
     max_charge_kw: f64,
+    #[serde(default)]
     max_discharge_kw: f64,
     night_charge_window: Option<(usize, usize)>,
+    #[serde(default)]
     night_charge_target_percent: f64,
     discharge_window: Option<(usize, usize)>,
+}
+
+fn zero_profile() -> [f64; 24] {
+    [0.0; 24]
 }
 
 #[derive(Deserialize)]
@@ -63,21 +75,26 @@ pub fn create_grid(city_name: &str) -> Grid {
         .buses
         .into_iter()
         .map(|b| {
-            let solar_kwp = b.roof_area_ha * USEFUL_ROOF_PERCENTAGE * SOLAR_COVERAGE * KWP_PER_HA;
-            Bus::new(
+            let is_generator = b.kind == BusKind::Generator;
+            let solar_kwp = if is_generator { 0.0 } else {
+                b.roof_area_ha * USEFUL_ROOF_PERCENTAGE * SOLAR_COVERAGE * KWP_PER_HA
+            };
+            let mut bus = Bus::new(
                 b.id,
                 &b.name,
                 b.kind,
                 b.voltage_kv,
-                b.demand_profile,
+                if is_generator { [0.0; 24] } else { b.demand_profile },
                 solar_kwp,
-                b.storable_energy_kwh,
-                b.max_charge_kw,
-                b.max_discharge_kw,
-                b.night_charge_window,
-                b.night_charge_target_percent,
-                b.discharge_window,
-            )
+                if is_generator { 0.0 } else { b.storable_energy_kwh },
+                if is_generator { 0.0 } else { b.max_charge_kw },
+                if is_generator { 0.0 } else { b.max_discharge_kw },
+                if is_generator { None } else { b.night_charge_window },
+                if is_generator { 0.0 } else { b.night_charge_target_percent },
+                if is_generator { None } else { b.discharge_window },
+            );
+            bus.generation_profile_kw = b.generation_profile_kw.unwrap_or([0.0; 24]);
+            bus
         })
         .collect();
 

@@ -43,11 +43,13 @@ fn main() {
     let simulation_duration = 24usize;
     let mut daily_demand_kwh = 0.0;
     let mut daily_solar_kwh = 0.0;
+    let mut daily_generation_kwh = 0.0;
+    let mut daily_dispatchable_generation_kwh = 0.0;
     let mut daily_losses_kwh = 0.0;
     let mut daily_import_kwh = 0.0;
     let mut daily_local_exchange_kwh = 0.0;
     let mut daily_unserved_kwh = 0.0;
-    let mut daily_curtailed_solar_kwh = 0.0;
+    let mut daily_curtailed_generation_kwh = 0.0;
     let mut peak_import_kw = f64::MIN;
     let mut peak_export_kw = f64::MIN;
     let mut reports: Vec<models::HourReport> = Vec::new();
@@ -60,11 +62,13 @@ fn main() {
 
         daily_demand_kwh += report.total_demand_kw;
         daily_solar_kwh += report.total_solar_kw;
+        daily_generation_kwh += report.total_generation_kw;
+        daily_dispatchable_generation_kwh += report.total_dispatchable_generation_kw;
         daily_losses_kwh += report.losses_kw;
         daily_import_kwh += report.grid_import_kw;
         daily_local_exchange_kwh += report.local_exchange_kw;
         daily_unserved_kwh += report.unserved_demand_kw;
-        daily_curtailed_solar_kwh += report.curtailed_solar_kw;
+        daily_curtailed_generation_kwh += report.curtailed_generation_kw;
         peak_import_kw = peak_import_kw.max(report.grid_import_kw);
         peak_export_kw = peak_export_kw.max(-report.grid_import_kw);
 
@@ -75,12 +79,14 @@ fn main() {
     println!("\n=== Resum diari ===");
     println!("Demanda total:                    {:>9.1} kWh", daily_demand_kwh);
     println!("Generació fotovoltaica:           {:>9.1} kWh", daily_solar_kwh);
+    println!("Generació total:                  {:>9.1} kWh", daily_generation_kwh);
+    println!("Generació gestionable:            {:>9.1} kWh", daily_dispatchable_generation_kwh);
     println!("Cobertura solar sobre demanda:    {:>8.1} %",
         if daily_demand_kwh > 0.0 { 100.0 * daily_solar_kwh / daily_demand_kwh } else { 0.0 });
     println!("Energia intercanviada localment:  {:>9.1} kWh", daily_local_exchange_kwh);
     println!("Pèrdues tècniques:                {:>9.2} kWh", daily_losses_kwh);
     println!("Demanda no servida:               {:>9.2} kWh", daily_unserved_kwh);
-    println!("Generació FV retallada:           {:>9.2} kWh", daily_curtailed_solar_kwh);
+    println!("Generació retallada:           {:>9.2} kWh", daily_curtailed_generation_kwh);
     println!("Balanç net amb xarxa transport:   {:>9.1} kWh ({})",
         daily_import_kwh,
         if daily_import_kwh >= 0.0 { "importador net" } else { "exportador net" });

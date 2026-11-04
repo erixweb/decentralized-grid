@@ -15,16 +15,19 @@ pub fn print_hour_report(report: &HourReport) {
     };
 
     println!(
-        "{:02}:00 | Demand {:>7.1} kW | FV {:>7.1} kW | Battery {:>20} | Local exchange {:>7.1} kW | {} | Losses {:>5.2} kW | Unserved {:>6.1} kW | Curtailed PV {:>6.1} kW | f={:.2} Hz",
+        "{:02}:00 | Demand {:>7.1} kW | FV {:>7.1} kW | Generation {:>7.1} kW (PV {:>7.1} + dispatchable {:>7.1}) | Battery {:>20} | Local exchange {:>7.1} kW | {} | Losses {:>5.2} kW | Unserved {:>6.1} kW | Curtailed generation {:>6.1} kW | f={:.2} Hz",
         report.hour,
         report.total_demand_kw,
         report.total_solar_kw,
+        report.total_generation_kw,
+        report.total_solar_kw,
+        report.total_dispatchable_generation_kw,
         battery_label,
         report.local_exchange_kw,
         import_label,
         report.losses_kw,
         report.unserved_demand_kw,
-        report.curtailed_solar_kw,
+        report.curtailed_generation_kw,
         report.frequency_hz
     );
 }

@@ -12,6 +12,7 @@ pub struct Bus {
     pub max_charge_kw: f64,
     pub max_discharge_kw: f64,
     pub solar_kwp: f64,
+    pub generation_profile_kw: [f64; 24],
     pub night_charge_window: Option<(usize, usize)>,
     pub night_charge_target_percent: f64,
     pub discharge_window: Option<(usize, usize)>,
@@ -30,6 +31,7 @@ pub enum BusKind {
     Construction,
     Transport,
     Services,
+    Generator,
 }
 
 impl BusKind {
@@ -45,6 +47,7 @@ impl BusKind {
             BusKind::Construction => "Construction and Public Works",
             BusKind::Transport => "Transport zone",
             BusKind::Services => "Services zone",
+            BusKind::Generator => "Power generator",
         }
     }
 }
@@ -79,6 +82,7 @@ impl Bus {
             max_charge_kw,
             max_discharge_kw,
             solar_kwp,
+            generation_profile_kw: [0.0; 24],
             night_charge_window,
             night_charge_target_percent,
             discharge_window,
