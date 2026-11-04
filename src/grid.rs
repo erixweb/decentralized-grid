@@ -382,6 +382,16 @@ mod tests {
     }
 
     #[test]
+    fn dispatchable_profile_is_ignored_on_non_generator_buses() {
+        let mut grid = test_grid();
+        grid.nodes[1].generation_profile_kw[0] = 750.0;
+        let report = grid.tick(0, 0.0);
+        assert_eq!(report.total_dispatchable_generation_kw, 0.0);
+        assert_eq!(report.total_generation_kw, 0.0);
+        assert!(report.grid_import_kw > 0.0);
+    }
+
+    #[test]
     fn grid_frequency_is_stiff_upstream_reference() {
         let mut grid = test_grid();
         let report = grid.tick(0, 0.0);
