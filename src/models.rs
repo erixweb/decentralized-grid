@@ -75,6 +75,7 @@ pub struct HourReport {
     pub hour: usize,
     pub total_demand_kw: f64,
     pub total_solar_kw: f64,
+    pub total_generation_kw: f64,
     pub total_battery_kw: f64,
     pub local_exchange_kw: f64,
     pub grid_import_kw: f64,
