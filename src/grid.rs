@@ -236,6 +236,7 @@ impl Grid {
                     secondary_power_by_bus[bus_idx] = -active_limit_kw;
                     transformer_overload_kw += excess;
                     curtailed_generation_kw += excess;
+                    total_generation_kw = (total_generation_kw - excess).max(0.0);
                 }
             }
         }
@@ -366,6 +367,7 @@ mod tests {
         grid.nodes[1].kind = BusKind::Generator;
         grid.nodes[1].demand_profile = [0.0; 24];
         grid.nodes[1].generation_profile_kw[0] = 1_000.0;
+        grid.transformers[0].rated_power_kva = 2_000.0;
         let report = grid.tick(0, 0.0);
         assert_eq!(report.total_demand_kw, 0.0);
         assert!((report.total_generation_kw - 1_000.0).abs() < 1e-6);
