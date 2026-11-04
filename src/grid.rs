@@ -147,24 +147,29 @@ impl Grid {
     pub fn tick(&mut self, hour: usize, irradiation_w_m2: f64) -> HourReport {
         let mut total_demand_kw = 0.0;
         let mut potential_solar_kw = 0.0;
+        let mut potential_generator_kw = 0.0;
         let mut total_battery_kw = 0.0;
 
         for bus in &self.nodes {
             if bus.kind == BusKind::Substation { continue; }
             total_demand_kw += bus.demand_at(hour);
             potential_solar_kw += bus.solar_generation_at(irradiation_w_m2);
+            potential_generator_kw += bus.generation_profile_kw[hour];
         }
 
         let battery_charge_capacity: f64 = self.nodes.iter()
             .filter(|bus| bus.kind != BusKind::Substation)
             .map(|bus| bus.max_charge_kw).sum();
-        let max_absorption = total_demand_kw + battery_charge_capacity + MAX_SUBSTATION_EXPORT_KW;
+        let max_absorption = (total_demand_kw + battery_charge_capacity + MAX_SUBSTATION_EXPORT_KW
+            - potential_generator_kw).max(0.0);
         let actual_solar_kw = potential_solar_kw.min(max_absorption);
         let curtailment_ratio = if potential_solar_kw > 0.0 {
             actual_solar_kw / potential_solar_kw
         } else { 1.0 };
         let mut total_solar_kw = 0.0;
+        let mut total_generation_kw = 0.0;
         let mut curtailed_solar_kw = (potential_solar_kw - actual_solar_kw).max(0.0);
+        let mut curtailed_generation_kw = curtailed_solar_kw;
         let mut unserved_demand_kw = 0.0;
         let mut secondary_power_by_bus = vec![0.0; self.nodes.len()];
         let mut night_grid_charge_by_bus = vec![0.0; self.nodes.len()];
@@ -175,7 +180,9 @@ impl Grid {
             let demand = self.nodes[bus_idx].demand_at(hour);
             let solar = self.nodes[bus_idx].solar_generation_at(irradiation_w_m2) * curtailment_ratio;
             total_solar_kw += solar;
-            let net_value = solar - demand;
+            let generator = self.nodes[bus_idx].generation_profile_kw[hour];
+            total_generation_kw += solar + generator;
+            let net_value = solar + generator - demand;
             let in_night_charge_window = matches!(
                 self.nodes[bus_idx].night_charge_window,
                 Some((start, end)) if hour >= start && hour < end
@@ -229,7 +236,7 @@ impl Grid {
                     let excess = -active_limit_kw - requested_kw;
                     secondary_power_by_bus[bus_idx] = -active_limit_kw;
                     transformer_overload_kw += excess;
-                    curtailed_solar_kw += excess;
+                    curtailed_generation_kw += excess;
                 }
             }
         }
@@ -244,6 +251,7 @@ impl Grid {
             let delivered_export = (-secondary_power_by_bus[bus_idx]).max(0.0);
             let curtailed_export = (requested_export - delivered_export).max(0.0);
             total_solar_kw = (total_solar_kw - curtailed_export).max(0.0);
+            total_generation_kw = (total_generation_kw - curtailed_export).max(0.0);
 
             let requested_import = requested_secondary_power_by_bus[bus_idx].max(0.0);
             let delivered_import = secondary_power_by_bus[bus_idx].max(0.0);
@@ -256,7 +264,8 @@ impl Grid {
             }
         }
         unserved_demand_kw += (unserved_at_substation_kw - curtailed_battery_charge_kw).max(0.0);
-        curtailed_solar_kw += curtailed_at_substation_kw;
+        curtailed_generation_kw += curtailed_at_substation_kw;
+        curtailed_solar_kw = curtailed_generation_kw;
 
         let (grid_import_kw, losses_kw) = self.calculate_grid_exchange(&secondary_power_by_bus);
 
@@ -272,12 +281,14 @@ impl Grid {
             hour,
             total_demand_kw,
             total_solar_kw,
+            total_generation_kw,
             total_battery_kw,
             local_exchange_kw,
             grid_import_kw,
             losses_kw,
             unserved_demand_kw,
-            curtailed_solar_kw,
+            curtailed_solar_kw: curtailed_generation_kw,
+            curtailed_generation_kw,
             transformer_overload_kw,
             frequency_hz,
         }
